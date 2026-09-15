@@ -1906,6 +1906,7 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
       <span style="width: 7px; height: 7px; border-radius: 999px; background: var(--pv-accent, #F58634); flex: none;"></span>
       <span style="text-transform: uppercase; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;">Entorno de demostración — los datos son ficticios y no se envían a PIVCA</span>
       <span style="flex: 1;"></span>
+      <a href="../" style="flex: none; color: rgba(255,255,255,0.8); text-decoration: none; border: 1px solid rgba(255,255,255,0.28); border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap;">← Portada</a>
       <button type="button" sc-camel-on-click="{{ onLibre }}" title="{{ libreTitulo }}" style="flex: none; background: transparent; border: 1px solid rgba(255,255,255,0.28); color: #FFF; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; display: flex; align-items: center; gap: 6px;" style-hover="background: rgba(255,255,255,0.12);"><span data-lucide="compass" style="width: 12px; height: 12px; display: inline-flex; color: inherit;"></span>{{ libreLabel }}</button>
       <button type="button" sc-camel-on-click="{{ onCambiar }}" style="flex: none; background: transparent; border: 1px solid rgba(255,255,255,0.28); color: #FFF; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer;" style-hover="background: rgba(255,255,255,0.12);">Cambiar escenario</button>
       <button type="button" sc-camel-on-click="{{ onReiniciar }}" style="flex: none; background: transparent; border: 1px solid rgba(255,255,255,0.28); color: #FFF; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer;" style-hover="background: rgba(255,255,255,0.12);">Reiniciar</button>
@@ -2435,7 +2436,8 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
 
         <div style="display: flex; gap: 11px; flex-wrap: wrap;">
           <button type="button" sc-camel-on-click="{{ onCambiar }}" style="cursor: pointer; border: 0; border-radius: 8px; background: var(--pv-accent, #F58634); color: #FFFFFF; font-size: 14px; font-weight: 700; padding: 13px 24px; box-shadow: 0 6px 20px rgba(245,134,52,0.30);" style-hover="background: #E4761F;" style-active="transform: translateY(1px); box-shadow: none;">Practicar otro escenario</button>
-          <button type="button" sc-camel-on-click="{{ onRepetir }}" style="cursor: pointer; border: 1px solid #D9D6CE; border-radius: 8px; background: #FFFFFF; color: #1F1B16; font-size: 14px; font-weight: 600; padding: 13px 24px;" style-hover="background: #F4F3EF;" style-active="transform: translateY(1px);">Repetir este</button>
+          <a href="../cliente/" style="display: inline-flex; align-items: center; border: 1.5px solid #D9D6CE; border-radius: 8px; background: #FFFFFF; color: #1F1B16; font-size: 14px; font-weight: 600; padding: 13px 24px; text-decoration: none;">Ahora mira lo que ve tu cliente →</a>
+            <button type="button" sc-camel-on-click="{{ onRepetir }}" style="cursor: pointer; border: 1px solid #D9D6CE; border-radius: 8px; background: #FFFFFF; color: #1F1B16; font-size: 14px; font-weight: 600; padding: 13px 24px;" style-hover="background: #F4F3EF;" style-active="transform: translateY(1px);">Repetir este</button>
         </div>
       </div>
     </div>

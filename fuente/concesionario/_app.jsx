@@ -519,6 +519,13 @@ const CRED = { email: 'agente@autollanos.com.ve', pass: 'Pactto2026' };
 
 const LS_KEY = 'pactto.demo.v1';
 
+// Sesión compartida con el portal del cliente: mismo dominio, mismo
+// almacenamiento. Entrar en uno vale para el otro.
+const LS_SESION = 'pactto.sesion.v1';
+function haySesion() { try { return window.localStorage.getItem(LS_SESION) === '1'; } catch (e) { return false; } }
+function abrirSesion() { try { window.localStorage.setItem(LS_SESION, '1'); } catch (e) {} }
+function cerrarSesion() { try { window.localStorage.removeItem(LS_SESION); } catch (e) {} }
+
 const PERFIL_HASH = { natural: 'natural', juridica: 'juridica', pn: 'natural', pj: 'juridica' };
 const DESENLACE_HASH = {
   enviar: 'enviar', devuelto: 'devuelto', negada: 'negada',
@@ -789,13 +796,14 @@ class Component extends DCLogic {
       this.setState({ loginErr: 'Correo o contraseña incorrectos.' });
       return false;
     }
+    if (st.recordar) abrirSesion();
     this.setState({ entrando: true, loginErr: '' });
     setTimeout(() => this.setState({ phase: 'app', entrando: false }), 420);
     return true;
   }
 
   salir = () => {
-    olvidar();
+    olvidar(); cerrarSesion();
     this.setState({
       phase: 'login', paso: 3, menuUsuario: false,
       email: '', pass: '', loginErr: '', entrando: false, verPass: false
@@ -1366,6 +1374,7 @@ class Component extends DCLogic {
 
   componentDidMount() {
     if (this.props.acento) document.documentElement.style.setProperty('--pv-accent', this.props.acento);
+    if (haySesion() && this.state.phase === 'login') this.setState({ phase: 'app', paso: 4 });
     // Cambiar el hash con la página ya abierta debe llevarte a ese escenario
     // igual que abrir el enlace en frío. escribirHash() usa replaceState, que
     // no dispara este evento, así que no hay bucle.
@@ -1478,6 +1487,7 @@ class Component extends DCLogic {
 
   reset = (keepEscenario) => {
     if (this._tt) clearTimeout(this._tt);
+    cerrarSesion();
     if (this._sv) clearTimeout(this._sv);
     olvidar();
     if (!keepEscenario) {
