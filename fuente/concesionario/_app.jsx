@@ -1389,6 +1389,16 @@ class Component extends DCLogic {
     });
     window.addEventListener('resize', this._m);
     window.addEventListener('scroll', this._m, true);
+    // El menú del avatar se cierra pulsando fuera o con Escape, como
+    // cualquier menú: antes sólo se cerraba volviendo a pulsar el avatar.
+    this._fuera = (e) => {
+      if (!this.state.menuUsuario) return;
+      if (e.target && e.target.closest && e.target.closest('[data-menu-usuario]')) return;
+      this.setState({ menuUsuario: false });
+    };
+    this._esc = (e) => { if (e.key === 'Escape' && this.state.menuUsuario) this.setState({ menuUsuario: false }); };
+    document.addEventListener('pointerdown', this._fuera, true);
+    document.addEventListener('keydown', this._esc);
     this._iv = setInterval(() => { this.measure(); this.paintIcons(); }, 350);
     requestAnimationFrame(this._m);
     this.paintIcons();
@@ -1463,6 +1473,8 @@ class Component extends DCLogic {
   }
 
   componentWillUnmount() {
+    document.removeEventListener('pointerdown', this._fuera, true);
+    document.removeEventListener('keydown', this._esc);
     if (this._sv) clearTimeout(this._sv);
     window.removeEventListener('hashchange', this._h);
     window.removeEventListener('wheel', this._u);
@@ -2020,7 +2032,9 @@ class Component extends DCLogic {
       onSalir: this.salir,
       onComenzar: this.guard('scn-comenzar', () => {
         escribirHash(st.perfil, st.desenlace);
-        this.setState({ phase: 'login' });
+        // Si ya inició sesión en el otro portal, no se le vuelve a pedir:
+        // se salta la pantalla y el paso del guion que la acompaña.
+        this.setState(haySesion() ? { phase: 'app', paso: 3 } : { phase: 'login' });
       }, true),
       onLogin: this.guard('login-submit', () => this.entrar(), true),
       onNueva: this.guard('list-nueva', () => this.setState(s2 => ({ phase: 'tipo', tipo: s2.perfil })), true),

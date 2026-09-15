@@ -1869,6 +1869,22 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
   input, button { font-family: inherit; }
   a { color: var(--pv-accent, #F58634); text-decoration: underline; text-underline-offset: 2px; }
   a:hover { color: #D96E20; }
+
+/* Barra de demostración: por debajo de 720px el aviso sobra y los botones
+   se aprietan; sin esto «Reiniciar» quedaba fuera de la pantalla. */
+.pv-demo { display: flex; align-items: center; gap: 14px; }
+.pv-demo__texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 720px) {
+  .pv-demo { gap: 7px; padding-left: 10px; padding-right: 10px; }
+  .pv-demo__texto { display: none; }
+  .pv-demo__sep { display: none; }
+  .pv-demo a, .pv-demo button { padding-left: 9px !important; padding-right: 9px !important; font-size: 10.5px !important; }
+}
+@media (max-width: 400px) {
+  .pv-demo { gap: 5px; }
+  .pv-demo a, .pv-demo button { padding-left: 7px !important; padding-right: 7px !important; letter-spacing: 0 !important; }
+}
+
   @keyframes pvHalo {
     0%   { box-shadow: 0 0 0 0 rgba(245,134,52,0.50); }
     70%  { box-shadow: 0 0 0 13px rgba(245,134,52,0); }
@@ -1902,13 +1918,12 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
 <div style="min-height: 100vh; font-family: 'Montserrat', system-ui, sans-serif; color: #1A1A18; background: #F4F3EF;">
 
   <sc-if value="{{ showBanner }}" hint-placeholder-val="{{ true }}">
-    <div data-tip-ignore="1" style="position: fixed; top: 0; left: 0; right: 0; height: 34px; z-index: 200; background: #1F1B16; color: rgba(255,255,255,0.78); display: flex; align-items: center; gap: 16px; padding: 0 16px; font-size: 11px; letter-spacing: 0.06em;">
-      <span style="width: 7px; height: 7px; border-radius: 999px; background: var(--pv-accent, #F58634); flex: none;"></span>
-      <span style="text-transform: uppercase; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;">Entorno de demostración — los datos son ficticios y no se envían a PIVCA</span>
+    <div class="pv-demo" data-tip-ignore="1" style="position: fixed; top: 0; left: 0; right: 0; height: 34px; z-index: 200; background: #1F1B16; color: rgba(255,255,255,0.78); padding: 0 16px; font-size: 11px; letter-spacing: 0.06em;">
+      <span class="pv-demo__sep" style="width: 7px; height: 7px; border-radius: 999px; background: var(--pv-accent, #F58634); flex: none;"></span>
+      <span class="pv-demo__texto" style="text-transform: uppercase; font-weight: 600;">Entorno de demostración — los datos son ficticios y no se envían a PIVCA</span>
       <span style="flex: 1;"></span>
       <a href="../" style="flex: none; color: rgba(255,255,255,0.8); text-decoration: none; border: 1px solid rgba(255,255,255,0.28); border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap;">← Portada</a>
       <button type="button" sc-camel-on-click="{{ onLibre }}" title="{{ libreTitulo }}" style="flex: none; background: transparent; border: 1px solid rgba(255,255,255,0.28); color: #FFF; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; display: flex; align-items: center; gap: 6px;" style-hover="background: rgba(255,255,255,0.12);"><span data-lucide="compass" style="width: 12px; height: 12px; display: inline-flex; color: inherit;"></span>{{ libreLabel }}</button>
-      <button type="button" sc-camel-on-click="{{ onCambiar }}" style="flex: none; background: transparent; border: 1px solid rgba(255,255,255,0.28); color: #FFF; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer;" style-hover="background: rgba(255,255,255,0.12);">Cambiar escenario</button>
       <button type="button" sc-camel-on-click="{{ onReiniciar }}" style="flex: none; background: transparent; border: 1px solid rgba(255,255,255,0.28); color: #FFF; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer;" style-hover="background: rgba(255,255,255,0.12);">Reiniciar</button>
     </div>
   </sc-if>
@@ -2029,7 +2044,7 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
             <span data-lucide="bell" style="width: 19px; height: 19px; display: inline-flex; color: inherit;"></span>
             <span style="position: absolute; top: 0; right: 0; min-width: 16px; height: 16px; border-radius: 999px; background: var(--pv-accent, #F58634); color: #FFFFFF; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 4px;">3</span>
           </button>
-          <div style="position: relative; flex: none;">
+          <div data-menu-usuario="1" style="position: relative; flex: none;">
             <button type="button" sc-camel-on-click="{{ onAvatar }}" style="width: 34px; height: 34px; flex: none; border: 0; border-radius: 999px; background: var(--pv-accent, #F58634); color: #FFFFFF; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">{{ inicial }}</button>
             <sc-if value="{{ showMenuUsuario }}" hint-placeholder-val="{{ false }}">
               <div style="position: absolute; top: 44px; right: 0; z-index: 140; width: 248px; background: #FFFFFF; border: 1px solid #EAE8E2; border-radius: 10px; box-shadow: 0 10px 28px rgba(31,27,22,0.14); overflow: hidden;">

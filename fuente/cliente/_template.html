@@ -1866,6 +1866,22 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
   input, button, select { font-family: inherit; }
   a { color: var(--pv-accent, #F58634); text-decoration: underline; text-underline-offset: 2px; }
   a:hover { color: #D96E20; }
+
+/* Barra de demostración: por debajo de 720px el aviso sobra y los botones
+   se aprietan; sin esto «Reiniciar» quedaba fuera de la pantalla. */
+.pv-demo { display: flex; align-items: center; gap: 14px; }
+.pv-demo__texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 720px) {
+  .pv-demo { gap: 7px; padding-left: 10px; padding-right: 10px; }
+  .pv-demo__texto { display: none; }
+  .pv-demo__sep { display: none; }
+  .pv-demo a, .pv-demo button { padding-left: 9px !important; padding-right: 9px !important; font-size: 10.5px !important; }
+}
+@media (max-width: 400px) {
+  .pv-demo { gap: 5px; }
+  .pv-demo a, .pv-demo button { padding-left: 7px !important; padding-right: 7px !important; letter-spacing: 0 !important; }
+}
+
 .pm-app { container-type: inline-size; container-name: pm; }
 
 @keyframes pvHalo {
@@ -1929,7 +1945,7 @@ a:hover { color: var(--pivca-orange-500); text-decoration: underline; }
             <div style="display:flex; align-items:center; gap:14px; flex:none; margin-left:auto">
               <svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="var(--pivca-stone-600)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
               <span class="pm-soporte" style="font-size:13px; font-weight:600; color:var(--pivca-orange-500); border:1px solid var(--pivca-orange-400); border-radius:999px; padding:7px 16px">Soporte</span>
-              <div style="position:relative; flex:none">
+              <div data-menu-usuario="1" style="position:relative; flex:none">
                 <button type="button" sc-camel-on-click="{{ toggleUsuario }}" style="width:32px; height:32px; flex:none; border:0; border-radius:999px; background:var(--pivca-orange-400); color:#fff; font-family:var(--font-sans); font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center">{{ inicial }}</button>
                 <sc-if value="{{ menuUsuario }}" hint-placeholder-val="{{ false }}">
                   <div style="position:absolute; top:42px; right:0; z-index:140; width:244px; background:#fff; border:1px solid var(--border-default); border-radius:10px; box-shadow:0 10px 28px rgba(31,27,22,0.14); overflow:hidden">
@@ -2631,9 +2647,9 @@ a:hover { color: var(--pivca-orange-500); text-decoration: underline; }
 
 
   <!-- ══ BARRA DE DEMOSTRACIÓN ══ -->
-  <div data-tip-ignore="1" style="position:fixed; top:0; left:0; right:0; height:34px; z-index:200; background:#1F1B16; color:rgba(255,255,255,0.78); display:flex; align-items:center; gap:14px; padding:0 14px; font-size:11px; letter-spacing:0.06em">
-    <span style="width:7px; height:7px; border-radius:999px; background:var(--pivca-orange-400); flex:none"></span>
-    <span style="text-transform:uppercase; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0">Entorno de demostración — los datos son ficticios y no se envían a PIVCA</span>
+  <div class="pv-demo" data-tip-ignore="1" style="position:fixed; top:0; left:0; right:0; height:34px; z-index:200; background:#1F1B16; color:rgba(255,255,255,0.78); padding:0 14px; font-size:11px; letter-spacing:0.06em">
+    <span class="pv-demo__sep" style="width:7px; height:7px; border-radius:999px; background:var(--pivca-orange-400); flex:none"></span>
+    <span class="pv-demo__texto" style="text-transform:uppercase; font-weight:600">Entorno de demostración — los datos son ficticios y no se envían a PIVCA</span>
     <span style="flex:1"></span>
     <a href="../" style="flex:none; color:rgba(255,255,255,0.8); text-decoration:none; border:1px solid rgba(255,255,255,0.28); border-radius:999px; padding:4px 12px; font-size:11px; font-weight:600; letter-spacing:0.04em; white-space:nowrap">← Portada</a>
     <button type="button" sc-camel-on-click="{{ onLibre }}" style="flex:none; background:transparent; border:1px solid rgba(255,255,255,0.28); color:#FFF; border-radius:999px; padding:4px 12px; font-size:11px; font-weight:600; letter-spacing:0.04em; cursor:pointer; white-space:nowrap">{{ libreLabel }}</button>

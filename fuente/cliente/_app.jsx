@@ -208,6 +208,16 @@ class Component extends DCLogic {
     window.addEventListener('scroll', this._m, true);
     this._h = () => { if (leerHash()) window.location.reload(); };
     window.addEventListener('hashchange', this._h);
+    // El menú del avatar se cierra pulsando fuera o con Escape, como
+    // cualquier menú: antes sólo se cerraba volviendo a pulsar el avatar.
+    this._fuera = (e) => {
+      if (!this.state.menuUsuario) return;
+      if (e.target && e.target.closest && e.target.closest('[data-menu-usuario]')) return;
+      this.setState({ menuUsuario: false });
+    };
+    this._esc = (e) => { if (e.key === 'Escape' && this.state.menuUsuario) this.setState({ menuUsuario: false }); };
+    document.addEventListener('pointerdown', this._fuera, true);
+    document.addEventListener('keydown', this._esc);
     this._iv = setInterval(() => this.measure(), 350);
     requestAnimationFrame(this._m);
     setTimeout(() => this.centrar(), 320);
@@ -237,6 +247,8 @@ class Component extends DCLogic {
     window.removeEventListener('resize', this._m);
     window.removeEventListener('scroll', this._m, true);
     window.removeEventListener('hashchange', this._h);
+    document.removeEventListener('pointerdown', this._fuera, true);
+    document.removeEventListener('keydown', this._esc);
   }
 
   /* ---------- capa de datos ---------- */
@@ -1035,8 +1047,19 @@ class Component extends DCLogic {
 
   guion() {
     const g = GUION_CLI_BASE.slice();
+    const esc = this.state.escenario;
     (GUION_CLI[this.state.carril] || []).forEach(e => {
-      g.push({ fase: 'app', target: e.target, titulo: e.titulo, tip: e.tip });
+      let tip = e.tip;
+      // El último paso depende del desenlace: con referencia duplicada no hay
+      // número de reporte que guardar, hay un error que corregir.
+      if (e.target === 'cli-res-0' && this.state.carril === 'reporte') {
+        if (esc === 'ref_duplicada') {
+          tip = 'El reporte no se envió, para no duplicarlo. Desde aquí se corrige la referencia y se vuelve a intentar.';
+        } else if (esc === 'error_catalogo') {
+          tip = 'El catálogo de cuentas no cargó. Sin él no se puede reportar: hay que reintentar más tarde.';
+        }
+      }
+      g.push({ fase: 'app', target: e.target, titulo: e.titulo, tip: tip });
     });
     return g.map((e, i) => Object.assign({}, e, { kicker: 'Paso ' + (i + 1) }));
   }
@@ -1114,7 +1137,7 @@ class Component extends DCLogic {
     if (this.tToast) clearTimeout(this.tToast);
     if (this.tGuardar) clearTimeout(this.tGuardar);
     if (this.tPago) clearTimeout(this.tPago);
-    olvidar();
+    olvidar(); cerrarSesion();
     if (!mantenerEscenario) {
       try { window.history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
     }
@@ -1447,7 +1470,9 @@ class Component extends DCLogic {
     const totalGuia = this.guion().length;
     const terminado = s.fase === 'app' && !s.libre && s.paso >= totalGuia;
     const hechosGuia = Math.min(s.paso, totalGuia);
-    const desenlaces = DESENLACES_CLI[s.carril] || [];
+    // Nunca vacío: un carril desconocido (estado viejo, hash raro) dejaría
+    // desenlaces[0] sin definir y la pantalla en blanco.
+    const desenlaces = DESENLACES_CLI[s.carril] || DESENLACES_CLI.tarjeta;
     const escenarioOk = desenlaces.some(d => d.id === s.escenario) ? s.escenario : desenlaces[0].id;
 
     const tip = s.tip;
@@ -1475,15 +1500,23 @@ class Component extends DCLogic {
       esLogin: s.fase === 'login',
       esApp: s.fase === 'app' && !terminado,
       esFin: terminado,
-      cierreTexto: s.carril === 'reporte'
-        ? 'Declaraste un pago hecho por fuera y lo mandaste a conciliar. A partir de aquí PIVCA lo verifica contra el movimiento real del banco: el cliente no tiene que hacer nada más, sólo guardar el número de reporte por si hay que consultarlo.'
-        : 'Cobraste una cuota con tarjeta y viste el desenlace. PIVCA no almacena los datos de la tarjeta: el cargo lo procesa la pasarela, y lo que vuelve al portal es el resultado y la referencia.',
+      cierreTexto: s.carril !== 'reporte'
+        ? 'Cobraste una cuota con tarjeta y viste el desenlace. PIVCA no almacena los datos de la tarjeta: el cargo lo procesa la pasarela, y lo que vuelve al portal es el resultado y la referencia.'
+        : s.escenario === 'ref_duplicada'
+        ? 'El portal detuvo el reporte antes de enviarlo: esa referencia ya estaba registrada en la misma cuenta destino. Por eso pide la referencia antes que nada — es lo que evita que un mismo pago entre dos veces y descuadre la conciliación.'
+        : s.escenario === 'error_catalogo'
+        ? 'El catálogo de cuentas de PIVCA no cargó, y sin él no hay a dónde reportar. El portal no inventa una cuenta ni deja continuar a ciegas: avisa y ofrece reintentar.'
+        : 'Declaraste un pago hecho por fuera y lo mandaste a conciliar. A partir de aquí PIVCA lo verifica contra el movimiento real del banco: el cliente no tiene que hacer nada más, sólo guardar el número de reporte por si hay que consultarlo.',
       practicado: s.carril === 'reporte' ? [
         { t: 'Elegiste el financiamiento y declaraste cuánto pagaste' },
         { t: 'Viste los cuatro métodos que admite el portal: depósito, Zelle, cripto y Zinli' },
         { t: 'Comprobaste que las cuentas de PIVCA se listan por la fecha del pago, no por un interruptor' },
-        { t: 'Copiaste los datos de la cuenta sin transcribirlos a mano' },
-        { t: 'Adjuntaste el comprobante y enviaste el reporte a conciliación' }
+        { t: 'Llenaste referencia, remitente y comprobante' },
+        s.escenario === 'ref_duplicada'
+          ? { t: 'Viste qué pasa cuando la referencia ya se había reportado: el portal lo detiene antes de enviarlo' }
+          : s.escenario === 'error_catalogo'
+          ? { t: 'Viste qué pasa cuando el catálogo de cuentas no carga: avisa y deja reintentar' }
+          : { t: 'Enviaste el reporte a conciliación y guardaste su número' }
       ] : [
         { t: 'Elegiste el financiamiento y el monto ya calculado por el sistema' },
         { t: 'Viste que se puede repartir un pago entre varios financiamientos' },
@@ -1506,7 +1539,11 @@ class Component extends DCLogic {
         + (desenlaces.find(d => d.id === escenarioOk) || desenlaces[0]).label,
       comenzar: this.guard('cli-scn-comenzar', () => {
         escribirHash(s.carril, escenarioOk);
-        this.setState({ escenario: escenarioOk, tab: s.carril === 'reporte' ? 'reporte' : 'tdc', fase: 'login' });
+        const base = { escenario: escenarioOk, tab: s.carril === 'reporte' ? 'reporte' : 'tdc' };
+        // Si ya inició sesión en el otro portal, no se le vuelve a pedir.
+        this.setState(haySesion()
+          ? Object.assign(base, { fase: 'app', paso: 3 })
+          : Object.assign(base, { fase: 'login' }));
       }, true),
 
       email: s.email,
@@ -1525,8 +1562,8 @@ class Component extends DCLogic {
       onLoginKey: (e) => { if (e.key === 'Enter') this.guard('cli-login', () => this.entrar(), true)(); },
       onOjo: () => this.setState({ verPass: !s.verPass }),
       entrar: this.guard('cli-login', () => this.entrar(), true),
-      inicial: ((s.email || CRED.email).trim().charAt(0) || 'j').toUpperCase(),
-      usuarioCorreo: s.email || CRED.email,
+      inicial: 'J',
+      usuarioCorreo: 'jose.linares@correo.com',
       menuUsuario: s.menuUsuario,
       toggleUsuario: () => this.setState({ menuUsuario: !s.menuUsuario }),
       salir: this.salir,
@@ -1576,7 +1613,7 @@ class Component extends DCLogic {
           transition: 'width 300ms var(--ease-out)'
         },
         toggleWrap: {
-          position: 'fixed', top: movil ? '14px' : '78px', right: movil ? '16px' : '22px', zIndex: 90,
+          position: 'fixed', top: movil ? '44px' : '78px', right: movil ? '16px' : '22px', zIndex: 90,
           display: 'flex', alignItems: 'center', gap: '3px', padding: '3px',
           background: 'rgba(255,255,255,0.88)', border: '1px solid var(--border-default)',
           borderRadius: '999px', boxShadow: '0 1px 3px rgba(31,27,22,0.06)'
