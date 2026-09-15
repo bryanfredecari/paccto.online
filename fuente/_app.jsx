@@ -552,14 +552,16 @@ function leerGuardado() {
     if (!raw) return null;
     const d = JSON.parse(raw);
     // La versión corta el paso: un estado de una build anterior no se restaura.
-    if (!d || d.v !== 1 || !d.s || d.s.phase === 'scenario') return null;
+    if (!d || d.v !== 1 || !d.s || d.s.phase === 'scenario' || d.s.phase === 'login') return null;
     return Object.assign({}, d.s, { tip: null, toast: null, entrando: false, loginErr: '', pass: '', menuUsuario: false });
   } catch (e) { return null; }
 }
 
 function guardar(st) {
   try {
-    if (!st.recordar || st.phase === 'scenario') { olvidar(); return; }
+    // Sólo se recuerda una sesión iniciada: en la pantalla de escenarios y en
+    // la de login no hay nada que guardar, y así «Cerrar sesión» deja limpio.
+    if (!st.recordar || st.phase === 'scenario' || st.phase === 'login') { olvidar(); return; }
     const c = Object.assign({}, st);
     // Ni la geometría del tooltip (se recalcula sola) ni la contraseña.
     delete c.tip; delete c.toast; delete c.entrando; delete c.loginErr;

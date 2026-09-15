@@ -23,29 +23,13 @@ Pactto2026
 
 No hay build. Sube la carpeta a un repositorio y conéctalo a Vercel:
 
-```bash
-git init && git add . && git commit -m "Demo guiada para concesionarios"
-git remote add origin https://github.com/bryanfredecari/<repo>.git
-git push -u origin main
-```
+Publicado en **https://paccto-online.vercel.app** desde este repositorio. Vercel
+sirve `index.html` tal cual: sin framework, sin comando de build, sin directorio
+de salida. Cada push a `main` vuelve a desplegar.
 
-En Vercel: **Add New → Project → importar el repo → Deploy**. Sin framework, sin
-comando de build, sin directorio de salida. Se sirve `index.html` tal cual.
-
-**Un ajuste después del primer despliegue:** en `index.html`, cambia
-
-```html
-<meta property="og:image" content="og.png">
-```
-
-por la URL absoluta que te dé Vercel:
-
-```html
-<meta property="og:image" content="https://TU-DOMINIO.vercel.app/og.png">
-```
-
-Es lo que hace que al compartir el enlace por WhatsApp salga la tarjeta con
-imagen. Lo mismo para `twitter:image`.
+Si algún día cambia el dominio, hay que tocar `DOMINIO` en `fuente/pack.py` y
+reconstruir: `og:image` tiene que ser una URL absoluta o WhatsApp y LinkedIn no
+muestran la tarjeta al compartir el enlace.
 
 ## Enlaces por escenario
 
@@ -70,7 +54,8 @@ también sueltos: `#aprobada` vale.
   libremente» de la barra superior lo apaga y deja todos los controles abiertos;
   al volver a encenderlo se retoma en el mismo paso.
 - **Sesión recordada.** Con «Recordar mi sesión» marcado, recargar la página no
-  borra el avance. «Reiniciar» y «Cerrar sesión» lo limpian.
+  borra el avance. Sólo se guarda con la sesión ya iniciada —nunca la
+  contraseña—, así que «Reiniciar» y «Cerrar sesión» dejan el navegador limpio.
 - **Móvil.** Funciona en pantalla de teléfono sin desbordes.
 
 ## Editarlo después

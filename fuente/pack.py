@@ -44,6 +44,10 @@ FAVICON = ("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox
            "%3Cpath d='M22 48V16h13c6.6 0 11 4.2 11 10.4S41.6 37 35 37h-6v11z' fill='%23fff'/%3E"
            "%3C/svg%3E")
 
+# Dominio publicado. og:image tiene que ser absoluta: los rastreadores de
+# WhatsApp y LinkedIn no resuelven rutas relativas de forma fiable.
+DOMINIO = 'https://paccto-online.vercel.app'
+
 TITULO = 'Pactto · Demo guiada para concesionarios'
 DESC = ('Recorre el Portal Referido como lo hará tu equipo: carga de recaudos, '
         'asistente de solicitud y expediente. Entorno de demostración con datos ficticios.')
@@ -115,20 +119,19 @@ CABEZA = """  <meta name="viewport" content="width=device-width, initial-scale=1
   <meta name="theme-color" content="%s">
   <!-- Tarjeta al compartir el enlace. Los rastreadores de WhatsApp/LinkedIn no
        ejecutan JavaScript: leen estas etiquetas del HTML servido, por eso viven
-       aquí y no en la plantilla. Al desplegar, cambia og:image por la URL
-       absoluta de tu dominio: https://TU-DOMINIO.vercel.app/og.png -->
+       aquí y no en la plantilla. og:image apunta a DOMINIO (pack.py). -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Pactto">
   <meta property="og:title" content="%s">
   <meta property="og:description" content="%s">
-  <meta property="og:image" content="og.png">
+  <meta property="og:image" content="%s/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="%s">
   <meta name="twitter:description" content="%s">
-  <meta name="twitter:image" content="og.png">
-""" % (TITULO, DESC, FAVICON, ACENTO, TITULO, DESC, TITULO, DESC)
+  <meta name="twitter:image" content="%s/og.png">
+""" % (TITULO, DESC, FAVICON, ACENTO, TITULO, DESC, DOMINIO, TITULO, DESC, DOMINIO)
 
 if '<title>Bundled Page</title>' in shell:
     shell = shell.replace('  <title>Bundled Page</title>\n', '')
