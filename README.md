@@ -21,8 +21,6 @@ Pactto2026
 
 ## Desplegar
 
-No hay build. Sube la carpeta a un repositorio y conéctalo a Vercel:
-
 Publicado en **https://paccto-online.vercel.app** desde este repositorio. Vercel
 sirve `index.html` tal cual: sin framework, sin comando de build, sin directorio
 de salida. Cada push a `main` vuelve a desplegar.
