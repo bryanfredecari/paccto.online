@@ -555,6 +555,9 @@ function olvidar() { try { window.localStorage.removeItem(LS_KEY); } catch (e) {
 
 function leerGuardado() {
   try {
+    // El avance pertenece a la sesión: si se cerró en el otro portal, aquí
+    // tampoco vale. Sin esto, «Cerrar sesión» no cerraba nada al lado.
+    if (!haySesion()) { olvidar(); return null; }
     const raw = window.localStorage.getItem(LS_KEY);
     if (!raw) return null;
     const d = JSON.parse(raw);
@@ -1926,6 +1929,12 @@ class Component extends DCLogic {
     const flecha = ARROW[tip ? tip.mode : 'below'] || ARROW.below;
 
     return Object.assign({}, wz, {
+      // Sólo «enviar» monta un expediente nuevo; los otros tres abren uno ya
+      // existente del listado, y esos son de persona natural.
+      showNotaPerfil: st.perfil === 'juridica' && st.desenlace !== 'enviar',
+      notaPerfil: 'Los tres desenlaces sobre un expediente ya abierto usan casos reales del listado, '
+        + 'y esos son de persona natural. El perfil jurídico cambia el recorrido en «Solo cargar y enviar la solicitud», '
+        + 'que es donde se monta el expediente desde cero.',
       showBanner: this.props.bannerDemo !== false,
       libre: st.libre,
       libreLabel: st.libre ? 'Seguir la guía' : 'Explorar libremente',

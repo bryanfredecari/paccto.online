@@ -2361,7 +2361,7 @@ a:hover { color: var(--pivca-orange-500); text-decoration: underline; }
                           <sc-if value="{{ rp.cuentasError }}">
                             <div style="border:1px solid var(--status-danger); background:#FCF1EF; border-radius:8px; padding:14px 16px; display:flex; gap:14px; align-items:center; justify-content:space-between; flex-wrap:wrap">
                               <span style="font-size:12.5px; line-height:1.5; color:var(--status-danger)">{{ rp.cuentasError }}</span>
-                              <button style="{{ estilos.botonGhost }}" sc-camel-on-click="{{ rp.reconsultar }}">Reintentar</button>
+                              <button data-guide="cli-rp-reintentar" style="{{ estilos.botonGhost }}" sc-camel-on-click="{{ rp.reconsultar }}">Reintentar</button>
                             </div>
                           </sc-if>
     

@@ -94,6 +94,7 @@ const CARRIL_HASH = { tarjeta: 'tarjeta', tdc: 'tarjeta', reporte: 'reporte', re
 const DES_HASH = {
   asignado: 'aplicado', aplicado: 'aplicado',
   conciliacion: 'conciliacion', 'por-asignar': 'conciliacion',
+  'por-conciliar': 'aplicado', conciliar: 'aplicado',
   rechazado: 'rechazado', 'no-confirmado': 'no_confirmado', no_confirmado: 'no_confirmado',
   mixto: 'parcial', parcial: 'parcial',
   duplicada: 'ref_duplicada', ref_duplicada: 'ref_duplicada',
@@ -128,6 +129,9 @@ function escribirHash(carril, escenario) {
 
 function leerGuardado() {
   try {
+    // El avance pertenece a la sesión: si se cerró en el otro portal, aquí
+    // tampoco vale. Sin esto, «Cerrar sesión» no cerraba nada al lado.
+    if (!haySesion()) { olvidar(); return null; }
     const raw = window.localStorage.getItem(LS_KEY);
     if (!raw) return null;
     const d = JSON.parse(raw);
@@ -1048,7 +1052,11 @@ class Component extends DCLogic {
   guion() {
     const g = GUION_CLI_BASE.slice();
     const esc = this.state.escenario;
-    (GUION_CLI[this.state.carril] || []).forEach(e => {
+    const carril = this.state.carril;
+    (GUION_CLI[carril] || []).forEach(e => {
+      // Sin catálogo de cuentas no hay cuenta que elegir: esos dos pasos
+      // apuntarían a controles que este escenario nunca llega a pintar.
+      if (esc === 'error_catalogo' && e.target.indexOf('cli-rp-cuenta') === 0) return;
       let tip = e.tip;
       // El último paso depende del desenlace: con referencia duplicada no hay
       // número de reporte que guardar, hay un error que corregir.
@@ -1060,7 +1068,26 @@ class Component extends DCLogic {
         }
       }
       g.push({ fase: 'app', target: e.target, titulo: e.titulo, tip: tip });
+      // «Mixto» necesita dos tramos o el resultado degrada a «Por asignar».
+      if (esc === 'parcial' && e.target === 'cli-tc-fin-0') {
+        g.push({ fase: 'app', target: 'cli-tc-fin-1',
+          titulo: 'Marcar un segundo financiamiento',
+          tip: 'Un mismo pago puede repartirse entre varios. Marca también el segundo: así verás qué pasa cuando una parte se asigna y otra no.' });
+      }
+      // El catálogo caído no deja enviar nada: el recorrido cierra donde
+      // cierra el cliente de verdad, en el botón de reintentar.
+      if (esc === 'error_catalogo' && e.target === 'cli-rp-ejemplo') {
+        g.push({ fase: 'app', target: 'cli-rp-reintentar',
+          titulo: 'Reintentar la carga del catálogo',
+          tip: 'Sin las cuentas de PIVCA no hay a dónde reportar. El portal no inventa una cuenta ni deja seguir a ciegas: avisa y ofrece reintentar.' });
+      }
     });
+    if (esc === 'error_catalogo') {
+      // y sin envío no hay pantalla de resultado que leer
+      for (let i = g.length - 1; i >= 0; i--) {
+        if (g[i].target === 'cli-rp-enviar' || g[i].target === 'cli-res-0') g.splice(i, 1);
+      }
+    }
     return g.map((e, i) => Object.assign({}, e, { kicker: 'Paso ' + (i + 1) }));
   }
 
@@ -1501,7 +1528,15 @@ class Component extends DCLogic {
       esApp: s.fase === 'app' && !terminado,
       esFin: terminado,
       cierreTexto: s.carril !== 'reporte'
-        ? 'Cobraste una cuota con tarjeta y viste el desenlace. PIVCA no almacena los datos de la tarjeta: el cargo lo procesa la pasarela, y lo que vuelve al portal es el resultado y la referencia.'
+        ? (s.escenario === 'rechazado'
+            ? 'El emisor no autorizó el cargo, así que no se cobró nada. El portal lo dice sin rodeos y deja reintentar con otra tarjeta: no hay dinero retenido ni cuota que reclamar.'
+            : s.escenario === 'no_confirmado'
+            ? 'La pasarela no respondió a tiempo, y eso no es lo mismo que un rechazo: puede que el cargo se haya hecho. Por eso el portal pide NO reintentar y esperar — reintentar a ciegas es como se cobra dos veces.'
+            : s.escenario === 'parcial'
+            ? 'El cobro entró completo, pero sólo una parte se asignó sola. Lo que queda lo reparte un ejecutivo: el cliente ya pagó, lo que falta es contabilizarlo.'
+            : s.escenario === 'conciliacion'
+            ? 'El cobro entró, pero la asignación al financiamiento no es inmediata: la hace un ejecutivo. Conviene que el cliente lo sepa, porque su plan de pagos no cambia en ese mismo instante.'
+            : 'Cobraste una cuota con tarjeta y el pago quedó aplicado al momento. PIVCA no almacena los datos de la tarjeta: el cargo lo procesa la pasarela, y lo que vuelve al portal es el resultado y la referencia.')
         : s.escenario === 'ref_duplicada'
         ? 'El portal detuvo el reporte antes de enviarlo: esa referencia ya estaba registrada en la misma cuenta destino. Por eso pide la referencia antes que nada — es lo que evita que un mismo pago entre dos veces y descuadre la conciliación.'
         : s.escenario === 'error_catalogo'
@@ -1522,7 +1557,15 @@ class Component extends DCLogic {
         { t: 'Viste que se puede repartir un pago entre varios financiamientos' },
         { t: 'Pagaste con tarjeta y esperaste el desenlace de la pasarela' },
         { t: 'Leíste la referencia: es lo que el cliente comunica si hay que revisar algo' },
-        { t: 'Comprobaste que PIVCA no guarda los datos de la tarjeta' }
+        s.escenario === 'rechazado'
+          ? { t: 'Viste un rechazo del emisor: no se cobró nada y se puede reintentar con otra tarjeta' }
+          : s.escenario === 'no_confirmado'
+          ? { t: 'Viste el caso peligroso: sin confirmación NO se reintenta, porque el cargo pudo haberse hecho' }
+          : s.escenario === 'parcial'
+          ? { t: 'Viste un reparto a medias: el cobro entró completo y parte de la asignación quedó a un ejecutivo' }
+          : s.escenario === 'conciliacion'
+          ? { t: 'Viste que cobrar y asignar son dos cosas distintas, y que la segunda puede no ser inmediata' }
+          : { t: 'Comprobaste que PIVCA no guarda los datos de la tarjeta' }
       ],
 
       carriles: CARRILES.map(c => ({
@@ -1817,7 +1860,7 @@ class Component extends DCLogic {
         etiquetaCuenta: me === 'zelle' ? 'Correo Zelle de PIVCA' : 'Cuenta de PIVCA',
         cuentasCargando: rp.cuentas.estado === 'cargando',
         cuentasError: rp.cuentas.estado === 'error' ? rp.cuentas.mensaje : null,
-        reconsultar: () => { this._clave = null; this.sincronizarCuentas(); },
+        reconsultar: this.guard('cli-rp-reintentar', () => { this._clave = null; this.sincronizarCuentas(); }),
         selectorCuentas: rp.cuentas.estado === 'listo' && lista.length > 1,
         cuentaAbierta: rp.cuentaAbierta,
         abrirCuenta: this.guard('cli-rp-cuenta', () => this.set('rp', { cuentaAbierta: !rp.cuentaAbierta })),
