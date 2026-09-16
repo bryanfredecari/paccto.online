@@ -2,7 +2,7 @@
 <html><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pactto · Demo guiada para concesionarios</title>
+<title>Pactto · Demo para concesionarios</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23EF712A'/%3E%3Cpath d='M22 48V16h13c6.6 0 11 4.2 11 10.4S41.6 37 35 37h-6v11z' fill='%23fff'/%3E%3C/svg%3E">
 <script src="7dbe0ed4-2be5-49ce-8cfe-3b6dc9191074"></script>
 
@@ -1923,7 +1923,7 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
       <span class="pv-demo__texto" style="text-transform: uppercase; font-weight: 600;">Entorno de demostración — los datos son ficticios y no se envían a PIVCA</span>
       <span style="flex: 1;"></span>
       <a href="../" style="flex: none; color: rgba(255,255,255,0.8); text-decoration: none; border: 1px solid rgba(255,255,255,0.28); border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap;">← Portada</a>
-      <button type="button" sc-camel-on-click="{{ onLibre }}" title="{{ libreTitulo }}" style="flex: none; background: transparent; border: 1px solid rgba(255,255,255,0.28); color: #FFF; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; display: flex; align-items: center; gap: 6px;" style-hover="background: rgba(255,255,255,0.12);"><span data-lucide="compass" style="width: 12px; height: 12px; display: inline-flex; color: inherit;"></span>{{ libreLabel }}</button>
+      <sc-if value="{{ showLibreToggle }}" hint-placeholder-val="{{ true }}"><button type="button" sc-camel-on-click="{{ onLibre }}" title="{{ libreTitulo }}" style="flex: none; background: transparent; border: 1px solid rgba(255,255,255,0.28); color: #FFF; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; display: flex; align-items: center; gap: 6px;" style-hover="background: rgba(255,255,255,0.12);"><span data-lucide="compass" style="width: 12px; height: 12px; display: inline-flex; color: inherit;"></span>{{ libreLabel }}</button></sc-if>
       <button type="button" sc-camel-on-click="{{ onReiniciar }}" style="flex: none; background: transparent; border: 1px solid rgba(255,255,255,0.28); color: #FFF; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer;" style-hover="background: rgba(255,255,255,0.12);">Reiniciar</button>
     </div>
   </sc-if>
@@ -1933,6 +1933,37 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
   </sc-if>
 
   <!-- ══ ESCENARIO ══ -->
+  <sc-if value="{{ isModo }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width: 860px; margin: 0 auto; padding: 74px 24px 90px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 26px;">
+        <img src="f55b3e91-cb78-46d1-bb48-ebf17f5c671f" alt="PACTTO" style="height: 26px; width: auto; display: block;">
+        <span style="width: 1px; height: 18px; background: #D9D6CE;"></span>
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #8E8B82;">Portal Referido · Demo</span>
+      </div>
+
+      <h1 style="margin: 0 0 10px; font-weight: 800; font-size: 40px; line-height: 1.1; letter-spacing: -0.02em; color: #1F1B16;">¿Cómo quieres recorrer el portal?</h1>
+      <p style="margin: 0 0 30px; max-width: 60ch; font-size: 15px; line-height: 1.55; color: #5F5950; text-wrap: pretty;">Puedes seguir un recorrido paso a paso, o entrar y usar el portal por tu cuenta. El modo se cambia en cualquier momento desde la barra superior.</p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px;">
+        <button type="button" sc-camel-on-click="{{ onModoGuiado }}" style="text-align: left; cursor: pointer; background: #FFFFFF; border: 1.5px solid #EAE8E2; border-radius: 14px; padding: 24px 22px; display: flex; flex-direction: column; gap: 9px; font-family: inherit;" style-hover="border-color: var(--pv-accent, #F58634); box-shadow: 0 10px 26px rgba(31,27,22,0.08);">
+          <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pv-accent, #F58634);">Recorrido guiado</span>
+          <span style="font-size: 20px; font-weight: 700; color: #1F1B16;">Aprende paso a paso</span>
+          <span style="font-size: 13.5px; line-height: 1.55; color: #5F5950;">Eliges un escenario —persona natural o jurídica, y cómo termina— y te señalamos qué pulsar en cada momento.</span>
+          <span style="display: block; margin-top: 4px; font-size: 12.5px; line-height: 1.7; color: #6B6862;">· Cuatro desenlaces: enviar, devuelto, aprobada y rechazada<br>· Un globo explica cada paso<br>· «¿Dónde pulso?» si te pierdes</span>
+          <span style="margin-top: 8px; font-size: 14px; font-weight: 700; color: var(--pv-accent, #F58634);">Empezar el recorrido →</span>
+        </button>
+
+        <button type="button" sc-camel-on-click="{{ onModoLibre }}" style="text-align: left; cursor: pointer; background: #FFFFFF; border: 1.5px solid #EAE8E2; border-radius: 14px; padding: 24px 22px; display: flex; flex-direction: column; gap: 9px; font-family: inherit;" style-hover="border-color: var(--pv-accent, #F58634); box-shadow: 0 10px 26px rgba(31,27,22,0.08);">
+          <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pv-accent, #F58634);">Exploración libre</span>
+          <span style="font-size: 20px; font-weight: 700; color: #1F1B16;">Úsalo por tu cuenta</span>
+          <span style="font-size: 13.5px; line-height: 1.55; color: #5F5950;">Entras directo al portal. Lo que existe en la demo funciona: crear solicitudes, guardarlas como borrador y retomarlas, abrir expedientes y atender notificaciones.</span>
+          <span style="display: block; margin-top: 4px; font-size: 12.5px; line-height: 1.7; color: #6B6862;">· Sin guía ni pasos obligados<br>· Lo que no está en la demo te lo decimos al pulsarlo<br>· Los datos son ficticios y no salen de tu navegador</span>
+          <span style="margin-top: 8px; font-size: 14px; font-weight: 700; color: var(--pv-accent, #F58634);">Entrar al portal →</span>
+        </button>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ isScenario }}" hint-placeholder-val="{{ true }}">
     <div style="max-width: 780px; margin: 0 auto; padding: 74px 24px 140px;">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 26px;">
@@ -2047,10 +2078,25 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
         </nav>
 
         <div style="display: flex; align-items: center; gap: 12px; flex: none;">
-          <button type="button" sc-camel-on-click="{{ onCampana }}" style="position: relative; border: 0; background: transparent; cursor: pointer; padding: 6px; display: flex; color: #6B6862; border-radius: 6px;" style-hover="background: #F4F3EF; color: #1F1B16;">
+          <div data-menu-notif="1" style="position: relative; flex: none;">
+          <button type="button" sc-camel-on-click="{{ onCampana }}" title="Notificaciones" style="position: relative; border: 0; background: transparent; cursor: pointer; padding: 6px; display: flex; color: #6B6862; border-radius: 6px;" style-hover="background: #F4F3EF; color: #1F1B16;">
             <span data-lucide="bell" style="width: 19px; height: 19px; display: inline-flex; color: inherit;"></span>
-            <span style="position: absolute; top: 0; right: 0; min-width: 16px; height: 16px; border-radius: 999px; background: var(--pv-accent, #F58634); color: #FFFFFF; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 4px;">3</span>
+            <sc-if value="{{ hayNotif }}" hint-placeholder-val="{{ true }}">
+              <span style="position: absolute; top: 0; right: 0; min-width: 16px; height: 16px; border-radius: 999px; background: var(--pv-accent, #F58634); color: #FFFFFF; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 4px;">{{ notifTotal }}</span>
+            </sc-if>
           </button>
+          <sc-if value="{{ notifAbierto }}" hint-placeholder-val="{{ false }}">
+            <div role="menu" style="position: absolute; top: 42px; right: 0; z-index: 140; width: 320px; max-height: 384px; overflow-y: auto; background: #FFFFFF; border: 1px solid #EAE8E2; border-radius: 10px; box-shadow: 0 10px 28px rgba(31,27,22,0.14); padding: 4px 0;">
+              <p style="margin: 0; padding: 9px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8E8B82; border-bottom: 1px solid #F4F3EF;">Notificaciones</p>
+              <sc-if value="{{ notifVacio }}" hint-placeholder-val="{{ false }}">
+                <p style="margin: 0; padding: 22px 16px; font-size: 13px; color: #8E8B82; text-align: center;">No hay notificaciones pendientes.</p>
+              </sc-if>
+              <sc-for list="{{ notifItems }}" as="ni" hint-placeholder-count="1">
+                <button type="button" role="menuitem" sc-camel-on-click="{{ ni.abrir }}" style="width: 100%; text-align: left; border: 0; background: transparent; cursor: pointer; padding: 12px 16px; font-family: inherit; font-size: 13px; line-height: 1.45; color: #46413A;" style-hover="background: #FAFAF8;">{{ ni.texto }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          </div>
           <div data-menu-usuario="1" style="position: relative; flex: none;">
             <button type="button" sc-camel-on-click="{{ onAvatar }}" style="width: 34px; height: 34px; flex: none; border: 0; border-radius: 999px; background: var(--pv-accent, #F58634); color: #FFFFFF; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">{{ inicial }}</button>
             <sc-if value="{{ showMenuUsuario }}" hint-placeholder-val="{{ false }}">
@@ -2092,7 +2138,7 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
 
           <div style="flex: 1 1 auto; min-height: 180px; overflow-y: auto; border-top: 1px solid #EAE8E2;">
             <sc-for list="{{ visibles }}" as="c" hint-placeholder-count="5">
-              <div data-guide="{{ c.gkey }}" sc-camel-on-click="{{ c.onClick }}" style="cursor: pointer; padding: 16px 20px; background: {{ c.bg }}; border-left: 3px solid {{ c.bl }}; border-bottom: 1px solid #F4F3EF; display: flex; flex-direction: column; gap: 9px; transition: background 200ms cubic-bezier(0.22,1,0.36,1);" style-hover="background: #FAFAF8;">
+              <div data-guide="{{ c.gkey }}" sc-camel-on-click="{{ c.onClick }}" style="cursor: {{ c.cur }}; opacity: {{ c.op }}; padding: 16px 20px; background: {{ c.bg }}; border-left: 3px solid {{ c.bl }}; border-bottom: 1px solid #F4F3EF; display: flex; flex-direction: column; gap: 9px; transition: background 200ms cubic-bezier(0.22,1,0.36,1);" style-hover="background: #FAFAF8;">
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                   <span style="border-radius: 999px; padding: 4px 10px; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; background: {{ c.badgeBg }}; color: {{ c.badgeFg }};">{{ c.estado }}</span>
                   <span style="font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 12.5px; font-weight: 600; color: #8E8B82; letter-spacing: 0.02em;">{{ c.id }}</span>
@@ -2607,18 +2653,18 @@ em { font-style: italic; color: var(--pivca-orange-500); font-weight: inherit; }
                   <span style="flex: 1;"></span>
                   <span style="border-radius: 999px; padding: 3px 9px; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: #EAE8E2; color: #6B6862;">Opcional</span>
                 </div>
-                <div style="font-size: 13.5px; font-weight: 700; color: #1F1B16;">Otros</div>
-                <div style="font-size: 11.5px; line-height: 1.45; color: #8E8B82; text-wrap: pretty;">Cualquier documento adicional. Ponle un título corto para que el analista sepa qué es.</div>
+                <div style="font-size: 13.5px; font-weight: 700; color: #1F1B16;">Otros documentos</div>
+                <div style="font-size: 11.5px; line-height: 1.45; color: #8E8B82; text-wrap: pretty;">Adjunta cualquier documento adicional que no encaje en las categorías anteriores.</div>
                 <sc-for list="{{ otros }}" as="o" hint-placeholder-count="0">
                   <div style="display: flex; align-items: center; gap: 8px; border: 1px solid #EAE8E2; border-radius: 8px; padding: 8px 9px; background: #FAFAF8;">
-                    <input type="text" value="{{ o.titulo }}" sc-camel-on-change="{{ o.onTitulo }}" placeholder="Título corto" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 12px; font-weight: 600; color: #1F1B16;">
+                    <input type="text" value="{{ o.titulo }}" sc-camel-on-change="{{ o.onTitulo }}" placeholder="Ej. Carta de referencia comercial" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 12px; font-weight: 600; color: #1F1B16;">
                     <span style="flex: none; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 10.5px; color: #8E8B82; white-space: nowrap;">{{ o.file }}</span>
                     <button type="button" sc-camel-on-click="{{ o.onQuitar }}" title="Eliminar" style="flex: none; border: 0; background: transparent; cursor: pointer; padding: 2px; display: flex; color: #B8B5AC;" style-hover="color: #B23A2D;">
                       <span data-lucide="trash-2" style="width: 14px; height: 14px; display: inline-flex; color: inherit;"></span>
                     </button>
                   </div>
                 </sc-for>
-                <button type="button" sc-camel-on-click="{{ onOtroAdd }}" style="cursor: pointer; border: 1px solid #D9D6CE; border-radius: 7px; background: #FFFFFF; color: #46413A; font-size: 12px; font-weight: 600; padding: 9px 12px; white-space: nowrap; align-self: flex-start; margin-top: auto;" style-hover="background: #F4F3EF;">+ Añadir archivo</button>
+                <button type="button" sc-camel-on-click="{{ onOtroAdd }}" style="cursor: pointer; border: 1px solid #D9D6CE; border-radius: 7px; background: #FFFFFF; color: #46413A; font-size: 12px; font-weight: 600; padding: 9px 12px; white-space: nowrap; align-self: flex-start; margin-top: auto;" style-hover="background: #F4F3EF;">+ Agregar documento</button>
               </div>
             </div>
 

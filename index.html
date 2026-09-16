@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pactto · Demos guiadas</title>
-<meta name="description" content="Dos recorridos guiados por el sistema de financiamiento de PIVCA: el portal del concesionario y el portal del cliente. Entorno de demostración con datos ficticios.">
+<title>Pactto · Demos del portal</title>
+<meta name="description" content="El sistema de financiamiento de PIVCA desde sus dos lados, el del concesionario y el del cliente, con recorrido guiado o exploración libre. Entorno de demostración con datos ficticios.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23EF712A'/%3E%3Cpath d='M22 48V16h13c6.6 0 11 4.2 11 10.4S41.6 37 35 37h-6v11z' fill='%23fff'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#EF712A">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Pactto">
-<meta property="og:title" content="Pactto · Demos guiadas">
-<meta property="og:description" content="Dos recorridos guiados: el portal del concesionario y el portal del cliente. Entorno de demostración con datos ficticios.">
+<meta property="og:title" content="Pactto · Demos del portal">
+<meta property="og:description" content="El portal del concesionario y el del cliente, con recorrido guiado o exploración libre. Entorno de demostración con datos ficticios.">
 <meta property="og:image" content="https://paccto-online.vercel.app/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Pactto · Demos guiadas">
-<meta name="twitter:description" content="Dos recorridos guiados: el portal del concesionario y el portal del cliente.">
+<meta name="twitter:title" content="Pactto · Demos del portal">
+<meta name="twitter:description" content="El portal del concesionario y el del cliente, con recorrido guiado o exploración libre.">
 <meta name="twitter:image" content="https://paccto-online.vercel.app/og.png">
 <style>
   :root {
@@ -110,12 +110,7 @@
     color: inherit;
     transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
   }
-  .tarjeta:hover, .tarjeta:focus-visible {
-    border-color: var(--naranja);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 28px rgba(31,27,22,0.10);
-    outline: none;
-  }
+  .tarjeta:hover { border-color: #D9D6CE; }
   .quien {
     font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--naranja);
@@ -131,10 +126,20 @@
     content: ""; position: absolute; left: 0; top: 7px;
     width: 6px; height: 6px; border-radius: 999px; background: var(--naranja);
   }
-  .ir {
-    margin-top: 12px; font-size: 14px; font-weight: 700; color: var(--naranja);
-    display: inline-flex; align-items: center; gap: 6px;
+  .modos { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modo {
+    display: flex; flex-direction: column; gap: 3px;
+    text-decoration: none; border-radius: 10px; padding: 11px 12px;
+    border: 1.5px solid var(--borde); color: var(--tinta);
+    transition: border-color 160ms ease, background 160ms ease;
   }
+  .modo b { font-size: 13.5px; font-weight: 700; }
+  .modo span { font-size: 11.5px; line-height: 1.4; color: var(--gris); }
+  .modo:hover, .modo:focus-visible { border-color: var(--naranja); background: var(--naranja-suave); outline: none; }
+  .modo.primario { background: var(--naranja); border-color: var(--naranja); color: #fff; }
+  .modo.primario span { color: rgba(255,255,255,0.86); }
+  .modo.primario:hover, .modo.primario:focus-visible { background: #D9601C; border-color: #D9601C; }
+  @media (max-width: 380px) { .modos { grid-template-columns: 1fr; } }
 
   .pie {
     margin-top: 32px;
@@ -164,19 +169,19 @@
       <div class="logo">P</div>
       <div>
         <b>Pactto</b>
-        <small>Demos guiadas</small>
+        <small>Demos del portal</small>
       </div>
     </div>
 
     <h1>¿Desde dónde quieres ver el sistema?</h1>
     <p class="entrada">
-      Dos recorridos guiados por el mismo sistema, cada uno desde su lado del mostrador.
-      Ambos te van señalando qué pulsar en cada paso, y puedes apagar la guía cuando
-      quieras explorar por tu cuenta.
+      El mismo sistema desde sus dos lados del mostrador. En cada uno puedes seguir un
+      <b>recorrido guiado</b> que te señala qué pulsar, o entrar en <b>exploración libre</b>
+      y usarlo por tu cuenta. El modo se cambia en cualquier momento.
     </p>
 
     <div class="opciones">
-      <a class="tarjeta" href="concesionario/">
+      <div class="tarjeta">
         <span class="quien">Para el concesionario</span>
         <h2>Portal Referido</h2>
         <p>El lado del asesor: cargar una solicitud de financiamiento y seguirla hasta el desenlace.</p>
@@ -185,10 +190,13 @@
           <li>Persona natural y persona jurídica</li>
           <li>Recaudo devuelto, aprobada y rechazada</li>
         </ul>
-        <span class="ir">Entrar →</span>
-      </a>
+        <div class="modos">
+          <a class="modo primario" href="concesionario/#guiado"><b>Recorrido guiado</b><span>Paso a paso</span></a>
+          <a class="modo" href="concesionario/#libre"><b>Exploración libre</b><span>Por tu cuenta</span></a>
+        </div>
+      </div>
 
-      <a class="tarjeta" href="cliente/">
+      <div class="tarjeta">
         <span class="quien">Para el cliente final</span>
         <h2>Portal usuario</h2>
         <p>El lado del cliente: pagar su cuota con tarjeta o reportar un pago que ya hizo.</p>
@@ -197,8 +205,11 @@
           <li>Depósito, Zelle, cripto y Zinli</li>
           <li>Referencia duplicada y fallos de catálogo</li>
         </ul>
-        <span class="ir">Entrar →</span>
-      </a>
+        <div class="modos">
+          <a class="modo primario" href="cliente/#guiado"><b>Recorrido guiado</b><span>Paso a paso</span></a>
+          <a class="modo" href="cliente/#libre"><b>Exploración libre</b><span>Por tu cuenta</span></a>
+        </div>
+      </div>
     </div>
 
     <p class="pie">

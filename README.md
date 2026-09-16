@@ -13,6 +13,23 @@ ficticios.
 La idea es el efecto dominó: se lo mostramos al concesionario, y él se lo
 muestra a su cliente. Al cerrar cada recorrido hay un enlace al otro portal.
 
+## Dos modos
+
+Cada portal pregunta al entrar cómo se quiere recorrer, y el modo se cambia en
+cualquier momento desde la barra superior.
+
+- **Recorrido guiado.** Se elige un escenario y la guía señala qué pulsar en
+  cada paso, con un globo que lo explica y «¿Dónde pulso?» para quien se pierda.
+- **Exploración libre.** Se entra directo al portal y se usa lo que existe, sin
+  pasos obligados. Lo que el portal real tiene y la demo no, lo dice al pulsarlo
+  en vez de no hacer nada.
+
+En el concesionario, la exploración libre permite crear varias solicitudes,
+guardarlas como borrador y retomarlas desde el listado, enviarlas, abrir los
+tres expedientes de ejemplo y atender la notificación de la campana. En el
+cliente, pagar y reportar cuantas veces se quiera, eligiendo en un selector qué
+responde la pasarela o el catálogo.
+
 ## Credenciales
 
 Las mismas para los dos, y para todo el que reciba el enlace:
@@ -46,8 +63,10 @@ El hash de la URL escoge con qué practicar y entra directo al login.
 **Concesionario** — perfil (`natural` / `juridica`) y desenlace
 (`enviar` / `devuelto` / `rechazada` / `aprobada`), en cualquier orden:
 
-| Enlace | Qué practica |
+| Enlace | Qué abre |
 |---|---|
+| `/concesionario/#libre` | Exploración libre |
+| `/concesionario/#guiado` | Recorrido guiado, pantalla de escenarios |
 | `/concesionario/#natural/enviar` | Persona natural, cargar y enviar |
 | `/concesionario/#juridica/enviar` | Persona jurídica, cargar y enviar |
 | `/concesionario/#natural/devuelto` | Le devolvieron un recaudo |
@@ -56,8 +75,11 @@ El hash de la URL escoge con qué practicar y entra directo al login.
 
 **Cliente** — carril (`tarjeta` / `reporte`) y desenlace:
 
-| Enlace | Qué practica |
+| Enlace | Qué abre |
 |---|---|
+| `/cliente/#libre` | Exploración libre |
+| `/cliente/#libre/duplicada` | Exploración libre con ese desenlace ya elegido |
+| `/cliente/#guiado` | Recorrido guiado, pantalla de escenarios |
 | `/cliente/#tarjeta/asignado` | Pago con tarjeta aplicado al momento |
 | `/cliente/#tarjeta/por-asignar` | Pasó el cargo, falta asignarlo |
 | `/cliente/#tarjeta/rechazado` | El emisor no autorizó |
@@ -72,9 +94,9 @@ los reenvía al portal del concesionario.
 
 ## Cómo se comportan
 
-- **Recorrido guiado.** Señala qué pulsar en cada paso. «Explorar libremente»
-  lo apaga y deja todos los controles abiertos; al reactivarlo se retoma donde
-  se dejó.
+- **Cambio de modo.** «Explorar libremente» apaga la guía; «Activar la guía» la
+  enciende en el paso que corresponde a la pantalla en la que se está.
+- **«Reiniciar»** vuelve a la pregunta del modo y cierra la sesión.
 - **Sesión recordada.** Con «Recordar mi sesión» marcado, recargar no borra el
   avance. Sólo se guarda con la sesión ya iniciada —nunca la contraseña—, así
   que «Reiniciar» y «Cerrar sesión» dejan el navegador limpio.

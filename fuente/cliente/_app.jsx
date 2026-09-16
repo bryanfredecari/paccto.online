@@ -110,8 +110,20 @@ function leerHash() {
       const k = decodeURIComponent(t.trim());
       if (CARRIL_HASH[k]) out.carril = CARRIL_HASH[k];
       if (DES_HASH[k]) out.escenario = DES_HASH[k];
+      if (k === 'libre') out.libre = true;
+      if (k === 'guiado') out.libre = false;
     });
-    if (!out.carril && !out.escenario) return null;
+    // #libre (y opcionalmente #libre/rechazado): sin guía, directo al login
+    if (out.libre === true) {
+      out.fase = 'login'; out.paso = 0;
+      if (out.carril) out.tab = out.carril === 'reporte' ? 'reporte' : 'tdc';
+      return out;
+    }
+    if (!out.carril && !out.escenario) {
+      if (out.libre === false) { out.fase = 'escenario'; out.paso = 0; return out; }
+      return null;
+    }
+    out.libre = false;
     out.fase = 'login';
     out.paso = 3;
     return out;
@@ -135,18 +147,19 @@ function leerGuardado() {
     const raw = window.localStorage.getItem(LS_KEY);
     if (!raw) return null;
     const d = JSON.parse(raw);
-    if (!d || d.v !== 1 || !d.s || d.s.fase === 'escenario' || d.s.fase === 'login') return null;
+    if (!d || d.v !== 2 || !d.s || ['modo', 'escenario', 'login'].indexOf(d.s.fase) >= 0) return null;
     return Object.assign({}, d.s, { tip: null, toast: null, entrando: false, loginErr: '', pass: '', menuUsuario: false });
   } catch (e) { return null; }
 }
 
 function guardar(st) {
   try {
-    if (!st.recordar || st.fase === 'escenario' || st.fase === 'login') { olvidar(); return; }
+    if (!st.recordar || ['modo', 'escenario', 'login'].indexOf(st.fase) >= 0) { olvidar(); return; }
     const c = Object.assign({}, st);
     delete c.tip; delete c.toast; delete c.entrando; delete c.loginErr;
     delete c.pass; delete c.menuUsuario; delete c.api;
-    window.localStorage.setItem(LS_KEY, JSON.stringify({ v: 1, s: c }));
+    // v2: añade la elección de modo al estado guardado
+    window.localStorage.setItem(LS_KEY, JSON.stringify({ v: 2, s: c }));
   } catch (e) {}
 }
 
@@ -154,7 +167,8 @@ function estadoInicial() {
   const h = leerHash();
   const g = leerGuardado();
   if (!h) return g;
-  if (g && g.carril === (h.carril || g.carril) && g.escenario === (h.escenario || g.escenario)) return g;
+  const igual = (campo) => h[campo] === undefined || g[campo] === h[campo];
+  if (g && igual('carril') && igual('escenario') && (h.libre === undefined || !!g.libre === h.libre)) return g;
   olvidar();
   return h;
 }
@@ -164,7 +178,7 @@ class Component extends DCLogic {
   qrRef = React.createRef();
 
   state = Object.assign({
-    fase: 'escenario',
+    fase: 'modo',
     paso: 0,
     carril: 'tarjeta',
     email: '',
@@ -931,11 +945,11 @@ class Component extends DCLogic {
       f.push(this.filaDato('Referencia del intento', tx.referencia));
       f.push(this.filaDato('Monto del intento', this.fmt(tx.montoTotal)));
       f.push(this.filaDato('Estado', 'No confirmado', 'espera'));
-      acciones.push({ label: 'Contactar a Soporte', style: this.botonSecundario(), ir: () => {} });
+      acciones.push({ label: 'Contactar a Soporte', style: this.botonSecundario(), ir: () => this.noIncluido('soporte') });
     }
 
     acciones.push({ label: 'Volver al inicio', style: id === 'rechazado' ? this.botonSecundario() : this.botonPrimario(false), ir: () => this.reiniciarTC(false) });
-    acciones.push({ label: 'Ir a Historial de pagos', style: this.botonSecundario(), ir: () => {} });
+    acciones.push({ label: 'Ir a Historial de pagos', style: this.botonSecundario(), ir: () => this.noIncluido('historial') });
 
     const tramos = tx.tramos || [];
     const mixtoTx = tramos.length > 1 && tramos.some(t => t.concepto !== tramos[0].concepto);
@@ -1016,7 +1030,7 @@ class Component extends DCLogic {
       copiarStyle: this.copiarChip('num', false),
       acciones: this.conGuia([
         { label: 'Volver al inicio', style: this.botonPrimario(false), ir: () => this.reiniciarRP() },
-        { label: 'Ir a Historial de pagos', style: this.botonSecundario(), ir: () => {} }
+        { label: 'Ir a Historial de pagos', style: this.botonSecundario(), ir: () => this.noIncluido('historial') }
       ])
     };
   }
@@ -1039,7 +1053,7 @@ class Component extends DCLogic {
       copiar: null, copiarLabel: null, copiarStyle: null,
       acciones: this.conGuia([
         { label: 'Corregir la referencia', style: this.botonPrimario(false), ir: () => this.set('rp', { estado: 'editando', dup: null, referencia: '', enviado: false }) },
-        { label: 'Ver ese reporte en el historial', style: this.botonSecundario(), ir: () => {} }
+        { label: 'Ver ese reporte en el historial', style: this.botonSecundario(), ir: () => this.noIncluido('historial') }
       ])
     };
   }
@@ -1170,17 +1184,23 @@ class Component extends DCLogic {
       email: '', pass: '', loginErr: '', entrando: false, verPass: false });
   };
 
-  reiniciar = (mantenerEscenario) => {
+  // destino: 'modo' (empezar de cero), 'escenario' (otro escenario guiado)
+  // o 'login' (repetir el mismo). Acepta el booleano de antes.
+  reiniciar = (destino) => {
+    if (destino === true) destino = 'login';
+    if (destino === false || !destino) destino = 'escenario';
     if (this.tToast) clearTimeout(this.tToast);
     if (this.tGuardar) clearTimeout(this.tGuardar);
     if (this.tPago) clearTimeout(this.tPago);
     olvidar(); cerrarSesion();
-    if (!mantenerEscenario) {
-      try { window.history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
-    }
+    try {
+      const base = window.location.pathname + window.location.search;
+      if (destino === 'modo') window.history.replaceState(null, '', base);
+      else if (destino === 'escenario') window.history.replaceState(null, '', base + '#guiado');
+    } catch (e) {}
     this.setState({
-      fase: mantenerEscenario ? 'login' : 'escenario',
-      paso: mantenerEscenario ? 3 : 0,
+      fase: destino === 'modo' ? 'modo' : destino === 'login' ? 'login' : 'escenario',
+      paso: destino === 'login' ? 3 : 0,
       email: '', pass: '', loginErr: '', entrando: false, menuUsuario: false, libre: false,
       tab: 'tdc', tip: null, toast: null, copiado: null,
       tc: { sel: [], concepto: null, monto: '', abierto: false, aviso: null, tipoDoc: 'V', doc: '',
@@ -1218,6 +1238,18 @@ class Component extends DCLogic {
     if (!s.fecha) patch.fecha = this.hoyIso();
     this.set('rp', patch);
   };
+
+  // Qué decir cuando se pulsa algo que el portal real tiene y la demo no.
+  noIncluido(que) {
+    const M = {
+      home: 'El inicio del portal (resumen de tus financiamientos) no está incluido en esta demo: aquí se practica el módulo de pagos.',
+      historial: 'El historial de pagos no está incluido en esta demo. En el portal real, cada pago queda ahí con su referencia y su estado.',
+      perfil: 'El perfil no está incluido en esta demo.',
+      soporte: 'El canal de soporte no está incluido en esta demo. En el portal real abre la atención de PIVCA.',
+      notificaciones: 'Las notificaciones no están incluidas en esta demo del cliente.'
+    };
+    this.nudge(M[que] || 'Eso no está incluido en esta demo.');
+  }
 
   /* Marca las acciones de cualquier pantalla de resultado para que el
      recorrido pueda apuntar a ellas y cerrarse con la primera. */
@@ -1533,6 +1565,42 @@ class Component extends DCLogic {
     });
 
     const valsGuia = {
+      esModo: s.fase === 'modo',
+      onModoGuiado: () => {
+        try { window.history.replaceState(null, '', window.location.pathname + window.location.search + '#guiado'); } catch (e) {}
+        this.setState({ libre: false, fase: 'escenario', paso: 0 });
+      },
+      onModoLibre: () => {
+        try { window.history.replaceState(null, '', window.location.pathname + window.location.search + '#libre'); } catch (e) {}
+        this.setState({ libre: true, fase: haySesion() ? 'app' : 'login', paso: 0 });
+      },
+      verToggle: s.fase !== 'modo',
+      onSoporte: this.guard('cli-soporte', () => this.noIncluido('soporte'), true),
+      onCampanaCli: this.guard('cli-campana', () => this.noIncluido('notificaciones'), true),
+
+      // En exploración libre no hay pantalla de escenario: el desenlace que
+      // devuelve la pasarela (o el catálogo) se elige aquí, según la pestaña.
+      verSimulador: s.libre && s.fase === 'app',
+      simuladorAyuda: s.tab === 'reporte'
+        ? 'Qué responde PIVCA al reportar. Cambia la opción y vuelve a enviar.'
+        : 'Qué responde la pasarela al pagar. «Mixto» necesita dos financiamientos marcados.',
+      simulador: (DESENLACES_CLI[s.tab === 'reporte' ? 'reporte' : 'tarjeta']).map(d => {
+        const lista = DESENLACES_CLI[s.tab === 'reporte' ? 'reporte' : 'tarjeta'];
+        const actual = lista.some(x => x.id === s.escenario) ? s.escenario : lista[0].id;
+        const on = actual === d.id;
+        return {
+          label: d.label, titulo: d.desc,
+          elegir: () => this.setState({ escenario: d.id }),
+          style: {
+            border: '1px solid ' + (on ? 'var(--pivca-orange-400)' : 'var(--border-strong)'),
+            background: on ? 'var(--pivca-orange-50)' : '#fff',
+            color: on ? 'var(--pivca-orange-700)' : 'var(--pivca-stone-700)',
+            borderRadius: '999px', padding: '6px 13px', cursor: 'pointer', whiteSpace: 'nowrap',
+            fontFamily: 'var(--font-sans)', fontSize: '12.5px', fontWeight: on ? 600 : 500
+          }
+        };
+      }),
+
       esEscenario: s.fase === 'escenario',
       esLogin: s.fase === 'login',
       esApp: s.fase === 'app' && !terminado,
@@ -1626,13 +1694,14 @@ class Component extends DCLogic {
       salir: this.salir,
 
       libre: s.libre,
-      libreLabel: s.libre ? 'Seguir la guía' : 'Explorar libremente',
+      libreLabel: s.libre ? 'Activar la guía' : 'Explorar libremente',
       onLibre: () => this.setState(x => {
         if (!x.libre) return { libre: true, toast: null };
         return { libre: false, toast: null, paso: this.pasoParaLaPantalla(x.paso, x.fase) };
       }),
-      onReiniciar: () => this.reiniciar(false),
-      onRepetir: () => this.reiniciar(true),
+      onReiniciar: () => this.reiniciar('modo'),
+      onCambiar: () => this.reiniciar('escenario'),
+      onRepetir: () => this.reiniciar('login'),
 
       hayGuia: !!pasoGuia,
       pasoLabel: pasoGuia ? ('Paso ' + (s.paso + 1) + ' de ' + totalGuia) : '',
@@ -1697,16 +1766,18 @@ class Component extends DCLogic {
       },
 
       navegacion: [
-        { label: 'Home', activo: false }, { label: 'Pagar', activo: true },
-        { label: 'Historial de pagos', activo: false }, { label: 'Perfil', activo: false }
+        { label: 'Home', activo: false, que: 'home' }, { label: 'Pagar', activo: true },
+        { label: 'Historial de pagos', activo: false, que: 'historial' }, { label: 'Perfil', activo: false, que: 'perfil' }
       ].map(n => ({
         label: n.label,
+        ir: n.activo ? (() => {}) : this.guard('cli-nav-' + n.que, () => this.noIncluido(n.que), true),
         style: {
           fontSize: '14.5px', fontWeight: n.activo ? 600 : 400, whiteSpace: 'nowrap',
           color: n.activo ? 'var(--pivca-orange-500)' : 'var(--pivca-stone-700)',
           paddingBottom: '3px',
           borderBottom: '2px solid ' + (n.activo ? 'var(--pivca-orange-400)' : 'transparent'),
-          cursor: n.activo ? 'default' : 'not-allowed'
+          cursor: n.activo ? 'default' : 'pointer', background: 'none', border: 'none',
+          borderRadius: 0, paddingTop: 0, paddingLeft: 0, paddingRight: 0, fontFamily: 'var(--font-sans)'
         }
       })),
 

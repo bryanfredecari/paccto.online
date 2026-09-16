@@ -322,7 +322,7 @@ const BLOQUES = {
     { titulo: 'Origen de la solicitud', campos: [
       { label: 'Tipo de financiamiento', v: 'PIVCA AUTO' },
       { label: 'Fecha de solicitud', v: HOY },
-      { label: 'Número de solicitud', v: 'ID-001256' }
+      { label: 'Número de solicitud', v: '__ID__' }
     ] },
     { titulo: 'Concesionario', campos: [
       { label: 'Concesionario', v: 'ASESORES FINANCIEROS MIRANDA' },
@@ -519,6 +519,20 @@ const CRED = { email: 'agente@autollanos.com.ve', pass: 'Pactto2026' };
 
 const LS_KEY = 'pactto.demo.v1';
 
+// Lo que forma un borrador: todo el estado del asistente.
+const WIZ_CAMPOS = ['tipo', 'wstep', 'docs', 'fiadorDocs', 'islrExtra', 'otros', 'llenos', 'estadoCivil',
+  'ubic', 'laboralTipo', 'sinCreditos', 'ops', 'cuentas', 'fiadores', 'veh', 'plazo', 'proforma', 'postAbierto'];
+
+function wizLimpio() {
+  return {
+    wstep: 0, docs: {}, fiadorDocs: {}, islrExtra: 0, otros: [], llenos: {}, estadoCivil: '',
+    ubic: { estado: '', ciudad: '', municipio: '' }, laboralTipo: null, sinCreditos: false,
+    ops: [], cuentas: [], fiadores: [{ n: 1, datos: {} }],
+    veh: { marca: '', modelo: '', anio: '', version: '' }, plazo: null, proforma: false,
+    postAbierto: false, modal: null
+  };
+}
+
 // Sesión compartida con el portal del cliente: mismo dominio, mismo
 // almacenamiento. Entrar en uno vale para el otro.
 const LS_SESION = 'pactto.sesion.v1';
@@ -543,8 +557,22 @@ function leerHash() {
       const k = decodeURIComponent(t.trim());
       if (PERFIL_HASH[k]) out.perfil = PERFIL_HASH[k];
       if (DESENLACE_HASH[k]) out.desenlace = DESENLACE_HASH[k];
+      if (k === 'libre') out.libre = true;
+      if (k === 'guiado') out.libre = false;
     });
-    if (!out.perfil && !out.desenlace) return null;
+    // #libre: sin guía, directo al login (o al portal si ya hay sesión)
+    if (out.libre === true) {
+      delete out.perfil; delete out.desenlace;
+      out.phase = 'login'; out.paso = 0;
+      return out;
+    }
+    // #guiado a secas: a elegir escenario
+    if (!out.perfil && !out.desenlace) {
+      if (out.libre === false) { out.phase = 'scenario'; out.paso = 0; return out; }
+      return null;
+    }
+    // un escenario concreto siempre es recorrido guiado
+    out.libre = false;
     out.phase = 'login';
     out.paso = 3;
     return out;
@@ -562,7 +590,7 @@ function leerGuardado() {
     if (!raw) return null;
     const d = JSON.parse(raw);
     // La versión corta el paso: un estado de una build anterior no se restaura.
-    if (!d || d.v !== 1 || !d.s || d.s.phase === 'scenario' || d.s.phase === 'login') return null;
+    if (!d || d.v !== 2 || !d.s || ['modo', 'scenario', 'login'].indexOf(d.s.phase) >= 0) return null;
     return Object.assign({}, d.s, { tip: null, toast: null, entrando: false, loginErr: '', pass: '', menuUsuario: false });
   } catch (e) { return null; }
 }
@@ -571,12 +599,13 @@ function guardar(st) {
   try {
     // Sólo se recuerda una sesión iniciada: en la pantalla de escenarios y en
     // la de login no hay nada que guardar, y así «Cerrar sesión» deja limpio.
-    if (!st.recordar || st.phase === 'scenario' || st.phase === 'login') { olvidar(); return; }
+    if (!st.recordar || ['modo', 'scenario', 'login'].indexOf(st.phase) >= 0) { olvidar(); return; }
     const c = Object.assign({}, st);
     // Ni la geometría del tooltip (se recalcula sola) ni la contraseña.
     delete c.tip; delete c.toast; delete c.entrando; delete c.loginErr;
-    delete c.pass; delete c.menuUsuario;
-    window.localStorage.setItem(LS_KEY, JSON.stringify({ v: 1, s: c }));
+    delete c.pass; delete c.menuUsuario; delete c.notifAbierto;
+    // v2: añade modo libre, borradores y notificaciones al estado guardado
+    window.localStorage.setItem(LS_KEY, JSON.stringify({ v: 2, s: c }));
   } catch (e) {}
 }
 
@@ -586,7 +615,8 @@ function estadoInicial() {
   if (!h) return g;
   // El enlace sólo manda si pide un escenario distinto del que ya viene en
   // curso. Si coincide, recargar la página no debe devolverte al login.
-  if (g && g.perfil === (h.perfil || g.perfil) && g.desenlace === (h.desenlace || g.desenlace)) return g;
+  const igual = (campo) => h[campo] === undefined || g[campo] === h[campo];
+  if (g && igual('perfil') && igual('desenlace') && (h.libre === undefined || !!g.libre === h.libre)) return g;
   olvidar();
   return h;
 }
@@ -603,7 +633,7 @@ const money = (n) => '$' + n.toLocaleString('de-DE', { minimumFractionDigits: 2,
 
 class Component extends DCLogic {
   state = Object.assign({
-    phase: 'scenario',
+    phase: 'modo',
     paso: 0,
     perfil: 'natural',
     desenlace: 'enviar',
@@ -649,6 +679,10 @@ class Component extends DCLogic {
     entrando: false,
     recordar: true,
     menuUsuario: false,
+    notifAbierto: false,
+    editando: null,
+    wizId: null,
+    okId: null,
     libre: false
   }, estadoInicial());
 
@@ -956,16 +990,78 @@ class Component extends DCLogic {
   enviar = () => {
     const f = this.faltantes();
     if (f.dur.length) { this.setState({ modal: 'faltan' }); return; }
-    const v = this.state.veh;
-    this.setState({
-      modal: 'ok',
-      nuevas: [{
-        id: 'ID-001256', estado: 'REVISIÓN ANALISTA DE PRODUCTOS',
-        nombre: this.esJuridica() ? 'INVERSIONES CARABOBO C.A.' : 'CARLOS ANDRÉS LINARES GUEVARA',
-        vehiculo: (v.marca + ' ' + v.modelo + ' ' + v.anio).toUpperCase(), edad: 'Hace un momento', ia: true, nueva: true
-      }]
-    });
+    const st = this.state;
+    const id = st.wizId || st.editando || this.siguienteId();
+    const nuevo = {
+      id: id, estado: 'REVISIÓN ANALISTA DE PRODUCTOS',
+      nombre: this.esJuridica() ? 'INVERSIONES CARABOBO C.A.' : 'CARLOS ANDRÉS LINARES GUEVARA',
+      vehiculo: this.vehiculoTexto(), edad: 'Hace un momento', ia: true, nueva: true
+    };
+    this.setState(s2 => ({
+      modal: 'ok', editando: null, okId: id,
+      nuevas: [nuevo].concat(s2.nuevas.filter(x => x.id !== id))
+    }));
   };
+
+  /* ── exploración libre: borradores de verdad ──────────────
+     En el portal real cada paso se guarda y el borrador se retoma desde el
+     listado. Aquí se guarda una foto del asistente y se restaura al abrirlo. */
+  siguienteId() {
+    const usados = this.state.nuevas
+      .map(x => parseInt(String(x.id).replace(/\D/g, ''), 10))
+      .filter(v => !isNaN(v));
+    return 'ID-' + String(Math.max.apply(null, [1255].concat(usados)) + 1).padStart(6, '0');
+  }
+
+  vehiculoTexto() {
+    const v = this.state.veh;
+    return v.marca ? [v.marca, v.modelo, v.anio].filter(Boolean).join(' ').toUpperCase() : null;
+  }
+
+  guardarBorrador = () => {
+    const st = this.state;
+    const id = st.wizId || st.editando || this.siguienteId();
+    const snap = {};
+    WIZ_CAMPOS.forEach(k => { snap[k] = st[k]; });
+    const item = {
+      id: id, estado: 'BORRADOR', edad: 'Hace un momento',
+      nombre: st.llenos.personal ? (this.esJuridica() ? 'INVERSIONES CARABOBO C.A.' : 'CARLOS ANDRÉS LINARES GUEVARA') : null,
+      vehiculo: this.vehiculoTexto(),
+      pct: this.pctExpediente(), docs: true, nueva: true, borrador: true, snap: snap
+    };
+    this.setState(s2 => ({
+      nuevas: [item].concat(s2.nuevas.filter(x => x.id !== id)),
+      editando: null, phase: 'app', filtro: 'todos', page: 0, modal: null, sel: null
+    }));
+    this.nudge('Borrador ' + id + ' guardado. Lo retomas desde el listado.');
+  };
+
+  abrirBorrador(id) {
+    const it = this.state.nuevas.find(x => x.id === id);
+    if (!it || !it.snap) return;
+    this.setState(Object.assign(wizLimpio(), it.snap, { phase: 'wizard', editando: id, wizId: id, modal: null, sel: null }));
+  }
+
+  // Por qué una tarjeta del listado no abre nada. Mejor decirlo que callar.
+  porQueNoAbre(s) {
+    if (s.estado === 'EXPIRADA') return 'Esta solicitud expiró por inactividad (más de 30 días en borrador).';
+    if (s.estado === 'BORRADOR') return 'Este borrador es de ejemplo y no se puede reabrir. Crea una solicitud y guárdala como borrador para probarlo.';
+    return 'Esta solicitud no tiene expediente en la demo. Abre ID-001248, ID-001243 o ID-001239 para ver uno.';
+  }
+
+  // Notificaciones: el portal real suma documentos devueltos y solicitados
+  // pendientes por solicitud (AppNavbar.vue + NotificationsDropdown.vue).
+  notificaciones() {
+    const p = this.expPendientes();
+    const items = [];
+    if (p.dev || p.sol) {
+      const partes = [];
+      if (p.dev) partes.push(p.dev + ' documento' + (p.dev === 1 ? '' : 's') + ' devuelto' + (p.dev === 1 ? '' : 's'));
+      if (p.sol) partes.push(p.sol + ' documento' + (p.sol === 1 ? '' : 's') + ' solicitado' + (p.sol === 1 ? '' : 's') + ' pendiente' + (p.sol === 1 ? '' : 's'));
+      items.push({ id: 'ID-001248', texto: 'La solicitud 01248 tiene ' + partes.join(' y ') });
+    }
+    return { total: p.dev + p.sol, items: items };
+  }
 
   irA(id) {
     const i = this.pasos().findIndex(s => s.id === id);
@@ -1242,7 +1338,7 @@ class Component extends DCLogic {
           : 'Resolviste el recaudo devuelto y el solicitado. La solicitud sigue en revisión del analista de crédito.'),
 
       onExpMenu: this.guard('exp-menu', () => this.nudge('Menú de acciones del expediente — fuera del alcance de esta demo.')),
-      onExpCerrar: this.guard('exp-cerrar', () => this.setState({ phase: 'done' }), true)
+      onExpCerrar: this.guard('exp-cerrar', () => this.setState(this.state.libre ? { sel: null } : { phase: 'done' }), true)
     };
   }
 
@@ -1407,11 +1503,14 @@ class Component extends DCLogic {
     // El menú del avatar se cierra pulsando fuera o con Escape, como
     // cualquier menú: antes sólo se cerraba volviendo a pulsar el avatar.
     this._fuera = (e) => {
-      if (!this.state.menuUsuario) return;
-      if (e.target && e.target.closest && e.target.closest('[data-menu-usuario]')) return;
-      this.setState({ menuUsuario: false });
+      const dentro = (sel) => e.target && e.target.closest && e.target.closest(sel);
+      if (this.state.menuUsuario && !dentro('[data-menu-usuario]')) this.setState({ menuUsuario: false });
+      if (this.state.notifAbierto && !dentro('[data-menu-notif]')) this.setState({ notifAbierto: false });
     };
-    this._esc = (e) => { if (e.key === 'Escape' && this.state.menuUsuario) this.setState({ menuUsuario: false }); };
+    this._esc = (e) => {
+      if (e.key !== 'Escape') return;
+      if (this.state.menuUsuario || this.state.notifAbierto) this.setState({ menuUsuario: false, notifAbierto: false });
+    };
     document.addEventListener('pointerdown', this._fuera, true);
     document.addEventListener('keydown', this._esc);
     this._iv = setInterval(() => { this.measure(); this.paintIcons(); }, 350);
@@ -1512,20 +1611,25 @@ class Component extends DCLogic {
     setTimeout(this._m, 560);
   };
 
-  reset = (keepEscenario) => {
+  // destino: 'modo' (empezar de cero), 'escenario' (otro escenario guiado)
+  // o 'login' (repetir el mismo). Acepta el booleano de antes por compatibilidad.
+  reset = (destino) => {
+    if (destino === true) destino = 'login';
+    if (destino === false || !destino) destino = 'escenario';
     if (this._tt) clearTimeout(this._tt);
     cerrarSesion();
     if (this._sv) clearTimeout(this._sv);
     olvidar();
-    if (!keepEscenario) {
-      try {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      } catch (e) {}
-    }
+    try {
+      const base = window.location.pathname + window.location.search;
+      if (destino === 'modo') window.history.replaceState(null, '', base);
+      else if (destino === 'escenario') window.history.replaceState(null, '', base + '#guiado');
+    } catch (e) {}
     this.setState(s => ({
-      phase: keepEscenario ? 'login' : 'scenario',
-      paso: keepEscenario ? 3 : 0,
+      phase: destino === 'modo' ? 'modo' : destino === 'login' ? 'login' : 'scenario',
+      paso: destino === 'login' ? 3 : 0,
       email: '', pass: '', loginErr: '', entrando: false, menuUsuario: false, libre: false,
+      notifAbierto: false, editando: null, wizId: null, okId: null,
       filtro: 'todos', query: '', page: 0, verPass: false, toast: null, tip: null,
       wstep: 0, tipo: null, docs: {}, fiadorDocs: {}, islrExtra: 0, otros: [], llenos: {},
       estadoCivil: '', ubic: { estado: '', ciudad: '', municipio: '' }, laboralTipo: null,
@@ -1636,7 +1740,8 @@ class Component extends DCLogic {
 
     // bloques
     let bloques = [], nota = null;
-    if (id === 'datos') bloques = BLOQUES.datos.map(b => ({ titulo: b.titulo, campos: b.campos.map(f => this.campo(f, true)) }));
+    if (id === 'datos') bloques = BLOQUES.datos.map(b => ({ titulo: b.titulo, campos: b.campos.map(f => this.campo(
+      f.v === '__ID__' ? Object.assign({}, f, { v: this.state.wizId || 'ID-001256' }) : f, true)) }));
     if (id === 'personal') bloques = (juridica ? BLOQUES_JUR.personal : BLOQUES.personal).map(b => ({ titulo: b.titulo, campos: b.campos.map(f => this.campo(f, !!st.llenos.personal)) }));
     if (id === 'conyuge') bloques = BLOQUES.conyuge.map(b => ({ titulo: b.titulo, campos: b.campos.map(f => this.campo(f, !!st.llenos.conyuge)) }));
     if (id === 'ubicacion') {
@@ -1773,8 +1878,11 @@ class Component extends DCLogic {
       onWzFill: this.guard('wz-fill', this.fill),
       onWzNext: this.guard('wz-next', () => this.setState(s2 => ({ wstep: Math.min(s2.wstep + 1, this.pasos().length - 1) })), true),
       onWzAtras: this.guard('wz-atras', () => this.setState(s2 => ({ wstep: Math.max(0, s2.wstep - 1) }))),
-      onWzSalir: this.guard('wz-salir', () => this.setState({ phase: 'app' })),
-      onWzBorrador: this.guard('wz-borrador', () => this.nudge('Guardado como borrador. Puedes retomarlo desde el listado.')),
+      onWzSalir: this.guard('wz-salir', () => {
+        this.setState({ phase: 'app', editando: null });
+        if (this.state.libre) this.nudge('Saliste del asistente. Para conservar lo cargado, usa «Guardar como borrador».');
+      }, true),
+      onWzBorrador: this.guard('wz-borrador', this.guardarBorrador, true),
       onWzEnviar: this.guard('wz-enviar', this.enviar, true),
 
       wIsRecaudos: id === 'recaudos',
@@ -1846,7 +1954,7 @@ class Component extends DCLogic {
       modalFaltan: st.modal === 'faltan',
       modalOk: st.modal === 'ok',
       faltan: f.dur, luego: f.luego, hayLuego: f.luego.length > 0,
-      okId: 'ID-001256',
+      okId: st.okId || 'ID-001256',
       onModalCerrar: this.guard('modal-cerrar', () => this.setState({ modal: null })),
       onModalResolver: this.guard('modal-resolver', () => {
         const primera = this.pasos().find(s => !s.opcional && s.peso && !this.llena(s.id));
@@ -1858,6 +1966,7 @@ class Component extends DCLogic {
 
   renderVals() {
     const st = this.state;
+    const notif = this.notificaciones();
     const acento = this.props.acento || '#F58634';
     const paso = this.step();
     const total = this.guion().length;
@@ -1912,15 +2021,23 @@ class Component extends DCLogic {
         badgeBg: b.bg, badgeFg: b.fg,
         bg: s.id === st.sel ? '#FDF6EE' : '#FFFFFF',
         bl: s.id === st.sel ? (this.props.acento || '#F58634') : 'transparent',
-        gkey: s.nueva ? 'card-nueva' : ('card-' + s.id),
+        gkey: (s.nueva && !s.borrador) ? 'card-nueva' : ('card-' + s.id),
         showPct: s.estado === 'BORRADOR',
         pctW: (s.pct || 0) + '%',
         pctT: (s.pct || 0) + '%',
-        onClick: s.nueva
-          ? this.guard('card-nueva', () => this.setState({ phase: 'done' }), true)
+        // Como en HomeView.vue: la expirada se ve apagada y no responde.
+        cur: s.estado === 'EXPIRADA' ? 'default' : 'pointer',
+        op: s.estado === 'EXPIRADA' ? '0.6' : '1',
+        onClick: s.borrador
+          ? this.guard('card-' + s.id, () => this.abrirBorrador(s.id), true)
+          : s.nueva
+          ? this.guard('card-nueva', () => {
+              if (this.state.libre) this.nudge(s.id + ' está en revisión del analista de productos. Las solicitudes enviadas no tienen expediente propio en la demo.');
+              else this.setState({ phase: 'done' });
+            }, true)
           : (s.exp
             ? this.guard('card-' + s.id, () => this.setState({ sel: s.id, expCaso: s.expCaso, expDocPage: 0, expFiltro: 'todos' }), true)
-            : this.guard('card-' + s.id, null))
+            : this.guard('card-' + s.id, () => this.nudge(this.porQueNoAbre(s)), true))
       };
     });
 
@@ -1949,11 +2066,32 @@ class Component extends DCLogic {
         + 'que es donde se monta el expediente desde cero.',
       showBanner: this.props.bannerDemo !== false,
       libre: st.libre,
-      libreLabel: st.libre ? 'Seguir la guía' : 'Explorar libremente',
+      libreLabel: st.libre ? 'Activar la guía' : 'Explorar libremente',
       libreTitulo: st.libre
-        ? 'Vuelve al recorrido guiado, en el paso donde lo dejaste'
+        ? 'Enciende el recorrido guiado en el paso que corresponde a esta pantalla'
         : 'Apaga la guía y deja todos los controles abiertos',
+      showLibreToggle: st.phase !== 'modo',
       showDim: !!paso && this.props.atenuarFondo !== false,
+      isModo: st.phase === 'modo',
+      onModoGuiado: () => {
+        try { window.history.replaceState(null, '', window.location.pathname + window.location.search + '#guiado'); } catch (e) {}
+        this.setState({ libre: false, phase: 'scenario', paso: 0 });
+      },
+      onModoLibre: () => {
+        try { window.history.replaceState(null, '', window.location.pathname + window.location.search + '#libre'); } catch (e) {}
+        this.setState({ libre: true, phase: haySesion() ? 'app' : 'login', paso: 0 });
+      },
+      notifTotal: notif.total,
+      hayNotif: notif.total > 0,
+      notifAbierto: st.notifAbierto,
+      notifItems: notif.items.map(it => ({
+        texto: it.texto,
+        abrir: () => this.setState({
+          phase: 'app', sel: it.id, expCaso: 'devuelto', expDocPage: 0, expFiltro: 'todos',
+          notifAbierto: false, filtro: 'todos', query: '', page: 0
+        })
+      })),
+      notifVacio: notif.items.length === 0,
       isScenario: st.phase === 'scenario',
       isLogin: st.phase === 'login',
       isApp: st.phase === 'app',
@@ -2037,9 +2175,9 @@ class Component extends DCLogic {
         { t: 'Revisaste el expediente y lo enviaste: quedó en REVISIÓN ANALISTA DE PRODUCTOS' }
       ],
 
-      onCambiar: () => this.reset(false),
-      onReiniciar: () => this.reset(false),
-      onRepetir: () => this.reset(true),
+      onCambiar: () => this.reset('escenario'),
+      onReiniciar: () => this.reset('modo'),
+      onRepetir: () => this.reset('login'),
       onDonde: this.onDonde,
       onLibre: () => this.setState(s2 => {
         if (!s2.libre) return { libre: true, toast: null };
@@ -2061,10 +2199,15 @@ class Component extends DCLogic {
         this.setState(haySesion() ? { phase: 'app', paso: 3 } : { phase: 'login' });
       }, true),
       onLogin: this.guard('login-submit', () => this.entrar(), true),
-      onNueva: this.guard('list-nueva', () => this.setState(s2 => ({ phase: 'tipo', tipo: s2.perfil })), true),
-      onNavSolicitudes: this.guard('nav-solicitudes', null),
-      onNavUsuarios: this.guard('nav-usuarios', null),
-      onCampana: this.guard('nav-campana', null),
+      // cada solicitud nueva empieza en blanco (en libre puede haber habido otras)
+      onNueva: this.guard('list-nueva', () => this.setState(s2 => Object.assign(wizLimpio(), { phase: 'tipo', tipo: s2.perfil, editando: null, sel: null, wizId: this.siguienteId() })), true),
+      onNavSolicitudes: this.guard('nav-solicitudes', () => {
+        const venia = this.state.phase === 'wizard' || this.state.phase === 'tipo';
+        this.setState({ phase: 'app', sel: null, modal: null, editando: null, notifAbierto: false });
+        if (venia) this.nudge('Saliste del asistente. Para conservar lo cargado, usa «Guardar como borrador».');
+      }, true),
+      onNavUsuarios: this.guard('nav-usuarios', () => this.nudge('La administración de usuarios no está incluida en esta demo.'), true),
+      onCampana: this.guard('nav-campana', () => this.setState(s2 => ({ notifAbierto: !s2.notifAbierto, menuUsuario: false })), true),
       onAvatar: this.guard('nav-avatar', () => this.setState(s2 => ({ menuUsuario: !s2.menuUsuario }))),
       onPrev: this.guard('pag-prev', () => this.setState({ page: Math.max(0, page - 1) })),
       onNext: this.guard('pag-next', () => this.setState({ page: Math.min(pages - 1, page + 1) }))
