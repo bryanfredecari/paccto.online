@@ -1112,6 +1112,16 @@ class Component extends DCLogic {
     return s;
   }
 
+  // Primer paso del guion que corresponde a la pantalla en la que estamos,
+  // buscando desde el actual hacia delante y, si no hay, desde el principio.
+  pasoParaLaPantalla(desde, fase) {
+    const g = this.guion();
+    if (g[desde] && g[desde].fase === fase) return desde;
+    for (let i = desde; i < g.length; i++) if (g[i].fase === fase) return i;
+    for (let i = 0; i < g.length; i++) if (g[i].fase === fase) return i;
+    return desde;
+  }
+
   next() {
     const n = this.guion().length;
     this.setState(s => ({ paso: Math.min(s.paso + 1, n) }));
@@ -1119,7 +1129,7 @@ class Component extends DCLogic {
 
   nudge(msg) {
     if (this.tToast) clearTimeout(this.tToast);
-    this.setState({ toast: msg || 'Ese control existe, pero ahora practicamos otra cosa.' });
+    this.setState({ toast: msg || 'Eso es otra cosa. Para seguir el recorrido, pulsa «¿Dónde pulso?».' });
     this.tToast = setTimeout(() => this.setState({ toast: null }), 2800);
   }
 
@@ -1545,7 +1555,9 @@ class Component extends DCLogic {
       practicado: s.carril === 'reporte' ? [
         { t: 'Elegiste el financiamiento y declaraste cuánto pagaste' },
         { t: 'Viste los cuatro métodos que admite el portal: depósito, Zelle, cripto y Zinli' },
-        { t: 'Comprobaste que las cuentas de PIVCA se listan por la fecha del pago, no por un interruptor' },
+        s.escenario === 'error_catalogo'
+          ? { t: 'Comprobaste que sin catálogo de cuentas el portal se planta: no inventa una ni deja seguir a ciegas' }
+          : { t: 'Comprobaste que las cuentas de PIVCA se listan por la fecha del pago, no por un interruptor' },
         { t: 'Llenaste referencia, remitente y comprobante' },
         s.escenario === 'ref_duplicada'
           ? { t: 'Viste qué pasa cuando la referencia ya se había reportado: el portal lo detiene antes de enviarlo' }
@@ -1554,7 +1566,9 @@ class Component extends DCLogic {
           : { t: 'Enviaste el reporte a conciliación y guardaste su número' }
       ] : [
         { t: 'Elegiste el financiamiento y el monto ya calculado por el sistema' },
-        { t: 'Viste que se puede repartir un pago entre varios financiamientos' },
+        s.escenario === 'parcial'
+          ? { t: 'Repartiste un mismo pago entre dos financiamientos' }
+          : { t: 'Viste que el portal propone montos ya calculados, no los escribe el cliente' },
         { t: 'Pagaste con tarjeta y esperaste el desenlace de la pasarela' },
         { t: 'Leíste la referencia: es lo que el cliente comunica si hay que revisar algo' },
         s.escenario === 'rechazado'
@@ -1613,7 +1627,10 @@ class Component extends DCLogic {
 
       libre: s.libre,
       libreLabel: s.libre ? 'Seguir la guía' : 'Explorar libremente',
-      onLibre: () => this.setState(x => ({ libre: !x.libre, toast: null })),
+      onLibre: () => this.setState(x => {
+        if (!x.libre) return { libre: true, toast: null };
+        return { libre: false, toast: null, paso: this.pasoParaLaPantalla(x.paso, x.fase) };
+      }),
       onReiniciar: () => this.reiniciar(false),
       onRepetir: () => this.reiniciar(true),
 

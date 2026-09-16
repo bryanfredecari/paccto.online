@@ -311,7 +311,7 @@ const SECCIONES = [
     sub: 'Si aplica. Se llena a mano y cada fiador trae su propio juego de recaudos.' },
   { id: 'condiciones', nombre: 'Condiciones del financiamiento', corto: 'Condiciones', icon: 'percent', peso: 5,
     titulo: 'Condiciones del financiamiento',
-    sub: 'Monto, plazo y garantías con las que el cliente solicita el crédito.' },
+    sub: 'Monto, plazo y garantías con las que el cliente solicita el financiamiento.' },
   { id: 'revision', nombre: 'Revisión final', corto: 'Revisión', icon: 'clipboard-check', peso: 0,
     titulo: 'Verifica la información ingresada antes de enviar la solicitud al core de PIVCA',
     sub: 'Las secciones en rojo tienen faltantes obligatorios. Las blancas ya están listas.' }
@@ -658,7 +658,9 @@ class Component extends DCLogic {
     return e === 'Casado' || e === 'Concubino';
   }
 
-  esJuridica() { return this.state.tipo === 'juridica'; }
+  // Antes de que el asistente fije el tipo vale el perfil elegido: si no,
+  // el contador de pasos anuncia el recorrido de persona natural.
+  esJuridica() { return (this.state.tipo || this.state.perfil) === 'juridica'; }
 
   pasos() {
     const jur = this.esJuridica();
@@ -759,6 +761,16 @@ class Component extends DCLogic {
     return s;
   }
 
+  // Primer paso del guion que corresponde a la pantalla en la que estamos,
+  // buscando desde el actual hacia delante y, si no hay, desde el principio.
+  pasoParaLaPantalla(desde, fase) {
+    const g = this.guion();
+    if (g[desde] && g[desde].phase === fase) return desde;
+    for (let i = desde; i < g.length; i++) if (g[i].phase === fase) return i;
+    for (let i = 0; i < g.length; i++) if (g[i].phase === fase) return i;
+    return desde;
+  }
+
   next() {
     const n = this.guion().length;
     this.setState(s => ({ paso: Math.min(s.paso + 1, n) }));
@@ -766,7 +778,7 @@ class Component extends DCLogic {
 
   nudge(msg) {
     if (this._tt) clearTimeout(this._tt);
-    this.setState({ toast: msg || 'Ese control existe, pero ahora practicamos otra cosa.' });
+    this.setState({ toast: msg || 'Eso es otra cosa. Para seguir el recorrido, pulsa «¿Dónde pulso?».' });
     this._tt = setTimeout(() => this.setState({ toast: null }), 2800);
   }
 
@@ -2029,7 +2041,10 @@ class Component extends DCLogic {
       onReiniciar: () => this.reset(false),
       onRepetir: () => this.reset(true),
       onDonde: this.onDonde,
-      onLibre: () => this.setState(s2 => ({ libre: !s2.libre, toast: null })),
+      onLibre: () => this.setState(s2 => {
+        if (!s2.libre) return { libre: true, toast: null };
+        return { libre: false, toast: null, paso: this.pasoParaLaPantalla(s2.paso, s2.phase) };
+      }),
       onQuery: (e) => this.setState({ query: e.target.value, page: 0 }),
       onOjo: this.guard('login-ojo', () => this.setState({ verPass: !st.verPass })),
       onOlvide: this.guard('login-olvide', () => this.nudge(
